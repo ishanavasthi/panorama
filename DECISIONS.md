@@ -450,6 +450,63 @@ accessible PR, and seeding the private demo org is a later, separate milestone.
 
 ---
 
+## S8 — the real multi-repository workspace
+
+### What S8 shipped
+
+The other half of GitHub review: turning a pull request into a *workspace*.
+`WorkspaceProvisioner` lists an organisation's repositories, clones or updates
+them under `~/.panorama/workspaces/<owner>/` at `0700`, and checks the pull
+request's own repository out — detached — at the exact head SHA the review is
+pinned to. What it returns is the same `Workspace` S3 defined, so the GitHub path
+and the local path now differ *only* in how the directory of repositories is
+produced; retrieval, review, validation and rendering are byte-for-byte the same
+code. That is the local-first bet fully realised.
+
+### Decisions worth recording
+
+- **`gh` clones; `git` updates; no token is ever handled.** The first clone goes
+  through `gh repo clone`, which authenticates and configures the local repo so a
+  later `git fetch` reuses `gh`'s credential helper. Panorama never puts a token
+  in a URL, never reads one, and never echoes raw `gh`/`git` stderr — a failure
+  becomes a host-authored, redacted message.
+- **The PR repo is checked out at the immutable head SHA — closing the S5 gap.**
+  In local mode the PR repo was pinned to `main`; here it is detached at the
+  reviewed commit, so its working tree shows exactly what the pull request
+  changed. A fork PR's head is not on origin, so the commit is pulled via the
+  `refs/pull/<n>/head` ref — best-effort, since a plain-branch PR already has it.
+- **Small organisations only, enforced before cloning.** The lister asks for one
+  more than the ceiling; if that many come back, the org is over the limit and
+  the run fails having cloned nothing, rather than quietly enumerating thousands
+  of repositories.
+- **One writer per workspace, via an advisory lock held for the whole review.**
+  The provisioner is a context manager; it takes an `flock` on the owner
+  directory before mutating anything and holds it until the review is done, so a
+  second run cannot re-checkout the repositories underneath the first. A
+  contended lock fails fast with a clear message instead of blocking.
+- **A repository is untrusted data, so provisioning does the minimum.** A plain
+  clone and a detached checkout — no submodules, no LFS fetch, and never running
+  a project's own commands or hooks.
+
+### How it was verified
+
+The whole machinery is tested offline with **real git against local bare
+remotes** built from the fixtures — clone, idempotent update, the head-SHA
+checkout (asserting the working tree shows the reviewed change), the size
+ceiling, the missing-commit failure, and the exclusive lock — followed by a full
+review run over the provisioned workspace through the fake `claude`. A live
+private pull request end to end waits on the demo org existing on GitHub, which
+S10 seeds; nothing here needs a network or a real clone to be trusted.
+
+### A limitation this leaves
+
+The lock is advisory and single-host: it stops two runs *on this machine* from
+fighting over a checkout, not two machines sharing a network home. And every
+organisation repository is cloned in full — fine at the ≤50-repo ceiling, and
+deliberately simpler than partial or shallow clones.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:

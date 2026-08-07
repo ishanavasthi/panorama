@@ -92,27 +92,31 @@ were stable. No prompt or retrieval tuning was required.
 
 ## Reviewing a GitHub pull request
 
-Panorama can also read a real pull request through `gh` (which must be
-installed and signed in — `gh auth login`):
+Panorama can review a real pull request through `gh` (which must be installed
+and signed in — `gh auth login`):
 
 ```bash
 uv run panorama review owner/repo#123          # or a full PR URL
-uv run panorama review owner/repo#123 --json   # the normalized pull request
+uv run panorama review owner/repo#123 --json
 ```
 
-Intake works today: the PR is normalized into the same shape a local review
-uses, across a fork boundary, with no clone. The full cross-repository review
-of a GitHub PR additionally needs its sibling repositories cloned into a
-workspace, which is the next milestone (S8); until then the GitHub path
-performs intake and stops there rather than pretending to review. Panorama
-never reads, stores, or prints a GitHub token — `gh` owns that credential.
+This runs the same pipeline as a local review. Panorama normalizes the PR (a
+fork boundary is fine), clones the organisation's repositories into a private
+workspace under `~/.panorama/workspaces/<owner>/` (`0700`, locked so two runs
+never collide), checks the PR's own repository out at the exact reviewed commit,
+and then retrieves, reviews, validates, and renders exactly as it does locally.
+
+Two boundaries worth knowing: Panorama never reads, stores, or prints a GitHub
+token — `gh` owns that credential — and organisations larger than 50
+repositories are out of scope (it fails before cloning rather than degrading).
 
 ## Status
 
-Working local-first V1, complete through real evaluation (the plan's cut line).
-Implemented: `panorama doctor`, `panorama fixtures bootstrap`, `panorama review
---local` end to end (retrieval → Claude review → host validation →
-reference-only rendering, `--json`), and GitHub PR **intake** (`owner/repo#n` or
-URL). Not yet wired up: multi-repo cloning (so GitHub PRs can be reviewed
-cross-repo), `--post`, and `demo --github`. See `v1plan.md` for the build order
-and `DECISIONS.md` for the reasoning behind the major choices.
+Working V1 through live GitHub review. Implemented: `panorama doctor`,
+`panorama fixtures bootstrap`, and `panorama review` end to end for both a local
+fixture (`--local`) and a GitHub PR (`owner/repo#n` or URL) — intake → workspace
+(cloned for GitHub) → retrieval → Claude review → host validation →
+reference-only rendering, with `--json`. Not yet wired up: idempotent `--post`
+of a review comment, and `demo --github` seeding of the private mock org. See
+`v1plan.md` for the build order and `DECISIONS.md` for the reasoning behind the
+major choices.
