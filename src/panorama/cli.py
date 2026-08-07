@@ -12,8 +12,9 @@ import typer
 
 from panorama import __version__
 from panorama.doctor import render_report, run_doctor
-from panorama.errors import PanoramaError
+from panorama.errors import EXIT_GENERAL_ERROR, PanoramaError
 from panorama.fixtures import bootstrap as bootstrap_fixtures
+from panorama.intake import LocalPullRequestSource, PullRequest, resolve_local_repo
 
 app = typer.Typer(
     name="panorama",
@@ -109,9 +110,79 @@ def fixtures_bootstrap(
         typer.echo(f"  {repo.name}{suffix}")
 
 
+def _render_intake_summary(pr: PullRequest) -> str:
+    """A short, safe summary of a normalized pull request.
+
+    Deliberately does not print the diff body: even for local fixtures we keep
+    the discipline of not dumping repository source to stdout. `--json` is the
+    way to see the full normalized bundle.
+    """
+    files_changed = sum(1 for line in pr.diff.splitlines() if line.startswith("diff --git"))
+    diff_lines = pr.diff.count("\n")
+    return "\n".join(
+        [
+            "Local pull request",
+            f"  repo:   {pr.owner}/{pr.repo}",
+            f"  base:   {pr.base_ref} ({pr.base_sha[:7]})",
+            f"  head:   {pr.head_ref} ({pr.head_sha[:7]})",
+            f"  title:  {pr.title}",
+            f"  diff:   {files_changed} file(s) changed, {diff_lines} diff line(s)",
+            "",
+            "Intake only: the review pipeline is not wired up yet (lands in S5).",
+            "Use --json to see the full normalized pull request.",
+        ]
+    )
+
+
+@app.command()
+def review(
+    target: str | None = typer.Argument(
+        None,
+        metavar="[PR]",
+        help="owner/repo#n or PR URL. GitHub intake lands in a later milestone.",
+    ),
+    local: str | None = typer.Option(
+        None,
+        "--local",
+        help="Review a local fixture repository instead of a GitHub PR.",
+    ),
+    base: str = typer.Option("main", "--base", help="Base ref (default: main)."),
+    head: str | None = typer.Option(None, "--head", help="Head ref / branch to review."),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the normalized pull request as JSON instead of a summary.",
+    ),
+) -> None:
+    """Review a pull request. This build wires up local intake (`--local`) only."""
+    if local is not None and target is not None:
+        raise typer.BadParameter("pass either --local or a GitHub PR reference, not both.")
+    if local is None:
+        # GitHub intake is a below-the-cut-line milestone; fail honestly.
+        typer.echo(
+            "error: GitHub PR intake is not implemented yet; "
+            "use --local <repo> --head <branch>.",
+            err=True,
+        )
+        raise typer.Exit(EXIT_GENERAL_ERROR)
+    if head is None:
+        raise typer.BadParameter("--head is required with --local.")
+
+    try:
+        repo_path = resolve_local_repo(local)
+        pull_request = LocalPullRequestSource(repo_path, base, head).load()
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    if json_output:
+        typer.echo(pull_request.model_dump_json(indent=2))
+    else:
+        typer.echo(_render_intake_summary(pull_request))
+
+
 # --- Extension point -------------------------------------------------------
 # Other agents attach additional subcommands here, e.g.:
-#     app.command()(review)
 #     app.command()(demo)
 # -----------------------------------------------------------------------------
 

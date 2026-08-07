@@ -9,7 +9,7 @@ Three documents, with distinct authority:
 - **`IMPLEMENT.md`** — authoritative on **scope**: architecture, data shapes,
   constraints, deferred work. Local-only, not tracked in git.
 - **`DECISIONS.md`** — the plain-language record of trade-offs and limitations,
-  updated after each milestone.
+  updated only when a milestone actually produced one.
 
 This file is the working contract distilled from all three. When it disagrees
 with them, they win — and fix this file. `ASSIGNMENT.md` is the original brief
@@ -145,7 +145,7 @@ any GitHub code exists. Full exit criteria live in `v1plan.md`.
       in `docs/m0-claude-boundary.md`.
 - [ ] **S0** — minimal README so a fresh clone is runnable
 - [x] **S1** — four fixture repos + bootstrap, P1–P4 branches
-- [ ] **S2** — local PR intake (`--local`), SHA capture
+- [x] **S2** — local PR intake (`--local`), SHA capture
 - [ ] **S3** — workspace view over the fixtures + org map
 - [ ] **S4** — deterministic retrieval: diff signals, stopwords, sibling
       `git grep`, hit windows, convention-doc discovery
@@ -164,8 +164,11 @@ not add embeddings or a parser framework. If time compresses, drop below the
 cut line in this order: live `--post` → `demo --github` → GitHub intake. Never
 drop fixture evaluation, evidence validation, or the Loom.
 
-Update `DECISIONS.md` at each milestone boundary — high-level, plain language,
-no code required to follow it.
+Update `DECISIONS.md` only when a milestone actually produces something worth
+recording — a trade-off, a limitation, or a non-obvious decision. Do it after
+the implementation, not before, and skip it entirely for milestones that are
+pure mechanical plumbing with no choice behind them. When you do write, keep it
+high-level and plain language, no code required to follow it.
 
 ## Explicitly deferred — do not build
 

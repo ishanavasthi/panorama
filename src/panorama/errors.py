@@ -47,3 +47,12 @@ class ValidationError(PanoramaError):
     PR reference, or a Claude response that fails schema validation)."""
 
     exit_code = EXIT_VALIDATION_ERROR
+
+
+class IntakeError(PanoramaError):
+    """Raised when a pull request cannot be normalized from its source: an
+    unknown repository or ref, a directory that is not a git repository, or a
+    git read that fails. It is caused by bad user input, so it maps to the
+    validation exit code rather than the general one."""
+
+    exit_code = EXIT_VALIDATION_ERROR

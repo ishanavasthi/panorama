@@ -204,6 +204,33 @@ must *not* produce a cross-repo finding. Each defect is visible through a plain
   prior checkouts, but it refuses to delete a directory that is not
   recognisably a previous bootstrap unless `--force` is given.
 
+## S2 — local pull-request intake
+
+### What S2 shipped
+
+`panorama review --local <repo> --base main --head <branch>` normalizes a local
+git branch into the `PullRequest` shape that every later stage reads. Both
+intake sources (this one and the GitHub source later) produce that identical
+shape, so retrieval, review, and delivery never learn where a PR came from.
+
+### Decisions worth recording
+
+- **A local PR's title and body come from its head commit**, not a separate PR
+  description — there is no PR object locally. It is an honest stand-in, and a
+  real GitHub PR (whose title can differ from any commit) will fill these from
+  the API. Owner/repo are likewise read from the checkout's own directory
+  layout rather than invented.
+- **The diff is merge-base (three-dot) based**, matching how a real PR diff is
+  computed: it shows what the branch introduced since it diverged, so unrelated
+  commits landing on the base afterwards never leak into the review.
+- **An empty diff is a valid pull request, not an error.** A no-op PR
+  normalizes cleanly with an empty diff; an unknown ref or a non-git directory
+  is the failure, and it fails with a specific message.
+- **Intake is strictly read-only** — only `git rev-parse`, `git diff`, and
+  `git log`. The default summary never prints the diff body, keeping the
+  "don't dump repository source to stdout" discipline even for our own
+  fixtures; `--json` is the explicit way to get the full bundle.
+
 ---
 
 ## Standing limitations of V1
