@@ -2,9 +2,9 @@
 %% Paste into https://mermaid.live (or open with any Mermaid preview) and
 %% keep it on a second browser tab. Left-to-right so it reads like the pipeline.
 flowchart LR
-    PR["PR reference<br/>owner/repo#n or URL<br/>(or --local fixture)"]
+    PR["PR reference<br/>owner/repo#n or URL"]
 
-    subgraph PIPE["panorama review — one pipeline, either source"]
+    subgraph PIPE["panorama review — one pipeline"]
         direction LR
         INTAKE["intake<br/>PR metadata + diff<br/>→ normalized PullRequest"]
         WORKSPACE["workspace<br/>clone/fetch every sibling repo<br/>PR repo pinned at head SHA<br/>(private, 0700, locked)"]

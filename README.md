@@ -16,6 +16,14 @@ integration of any kind — no SDK, no HTTP call, no API key. If `claude` isn't
 installed and signed in, Panorama has no fallback. See `CLAUDE.md` for the
 full list of constraints this project is built against.
 
+> **Loom walkthrough:** _add link here_ — a short demo, the architecture and
+> major decisions, known limitations, what's next, and how AI tools were used.
+
+This README is the submission's written companion to that video. It covers
+setup and run instructions (below), and mirrors the video's architecture,
+decisions, limitations, next-steps, and AI-use notes further down so they can
+be read without watching.
+
 ## Prerequisites
 
 - Python 3.11+
@@ -136,12 +144,96 @@ review a seeded PR live, optionally posting the result back:
 uv run panorama review <your-user-or-org>/acme-api#1 --post
 ```
 
+## Architecture
+
+One pipeline runs for every review, regardless of where the PR came from:
+
+```
+panorama review <PR>
+  intake     PR metadata + diff             -> normalized PullRequest
+  workspace  clone/fetch every sibling repo -> PR repo pinned at head SHA (0700, locked)
+  retrieve   diff -> generic signals        -> bounded git-grep across siblings + org map + convention docs
+  review     local claude CLI, Read/Grep/Glob only, sandboxed -> JSON review
+  validate   repo/path/line/SHA + foreign-evidence + secret screen -> discard unsupported findings
+  deliver    Markdown / --json / idempotent --post
+```
+
+A diagram of the same flow lives in `docs/architecture.mmd` (paste into
+<https://mermaid.live> or any Mermaid preview). The load-bearing ideas:
+
+- **Two sources, one shape.** A local fixture branch and a GitHub PR both
+  normalize to the same `PullRequest`, so retrieval, review, validation, and
+  delivery never learn where the PR came from — the GitHub path only changes how
+  the repositories land on disk.
+- **Retrieval orients, the model confirms, the host verifies.** Deterministic
+  code finds likely cross-repo context; Claude reviews with that context;
+  then host code re-checks every citation against the real files. A finding
+  whose evidence doesn't resolve is **discarded, never downgraded**.
+- **The Claude boundary is the whole security story.** The only AI integration
+  is the local `claude` CLI on its subscription — no SDK, no HTTP, no API key.
+  It runs read/search-only, with the user's personal config, plugins, and MCP
+  servers switched off, scoped to the workspace, under a wall-clock timeout.
+  What was empirically verified about that boundary is written up in
+  `docs/m0-claude-boundary.md`.
+- **Reference-only by construction.** The output schema has no field for a
+  source excerpt, so a finding can only ever be a `repo/path:line` pointer —
+  safe to post on a repo whose readers can't see the cited repo's source.
+
+## Major decisions
+
+The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
+
+- **A CLI, not a GitHub App.** The hard problem is *finding cross-repo
+  context*, not delivery plumbing; the same pipeline wraps in a webhook later.
+  The assignment explicitly permits a CLI that can become a bot.
+- **The model reads the repositories directly, and the host checks its answers.**
+  Rather than feeding the model only pre-selected snippets (blind to whatever
+  retrieval missed) or letting it roam unverified (free to invent citations), it
+  does both — and every citation is re-checked against the real files, with
+  failures **discarded, never downgraded**.
+- **Lexical retrieval, not embeddings.** Explainable — every surfaced repo is
+  justified by which signal matched which line — with no index to build or drift.
+- **Findings cite locations; they never quote code.** Reference-only output is
+  safe to post on a repo whose readers can't see the cited repo's source.
+
+## Known limitations
+
+- **Small organisations only** — up to 50 repositories; it fails before cloning
+  rather than degrading past that.
+- **Lexical retrieval misses purely semantic links** — related code that shares
+  no vocabulary may not be surfaced; the model's own workspace search closes
+  some of that gap.
+- **Model output varies between runs.** Host validation bounds the *correctness*
+  of findings, not their run-to-run *consistency*.
+- **Giving the model read access to private source is an intentional
+  trade-off** — mitigated by read-only sandboxing, owner-only `0700` storage,
+  prompt-injection treatment, and reference-only output, not eliminated.
+- **One summary comment**, no inline diff comments, no automatic fixes. Absence
+  of a finding is not proof of safety — Panorama is a reviewer's assistant, not
+  a merge gate.
+
+## What I'd build next
+
+- Configurable repository selection instead of cloning the whole org.
+- Stronger semantic retrieval to catch links with no shared vocabulary.
+- A GitHub App / webhook delivery path for automatic PR triggers.
+- Inline line-level review comments, not just one summary comment.
+- Permission-aware evidence, so a cited location respects who can see which repo.
+
+## How I used AI tools
+
+AI was used throughout development as a coding partner — scaffolding modules,
+writing tests, and drafting docs — while I directed the architecture, the
+milestone sequencing, and every security boundary, and reviewed all of it. One
+milestone (M0) was deliberately handed to an adversarial AI review that found
+two real security defects a green test suite had missed. In the shipped
+product, the *only* runtime AI dependency is the local Claude Code CLI that
+performs the review itself.
+
 ## Status
 
 Feature-complete V1. Implemented: `panorama doctor`, `panorama fixtures
 bootstrap`, `panorama review` end to end for a local fixture (`--local`) and a
 GitHub PR (`owner/repo#n` or URL) — with `--json` and an idempotent `--post` —
-and `panorama demo --github` to seed a live private demo. The remaining work is
-handoff: this README's final polish, the decision record, and a walkthrough
-recording. See `v1plan.md` for the build order and `DECISIONS.md` for the
-reasoning behind the major choices.
+and `panorama demo --github` to seed a live private demo. See `v1plan.md` for
+the build order and `DECISIONS.md` for the reasoning behind the major choices.
