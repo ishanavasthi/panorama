@@ -166,6 +166,44 @@ def _strip_prefix(path: str) -> str:
     return path
 
 
+_DIFF_HEADER = re.compile(r"^diff --git a/(?P<a>.+?) b/(?P<b>.+)$")
+
+
+def filter_diff(diff: str) -> tuple[str, list[str]]:
+    """Drop generated, lock, and binary file sections from a unified diff.
+
+    A pull request that also regenerates a lockfile or a minified bundle carries
+    huge, low-signal hunks; feeding them to the model wastes attention and crowds
+    out the real change. This removes whole per-file sections that are generated
+    (by path) or binary (by the ``Binary files`` marker), and returns the trimmed
+    diff plus the paths it dropped, so the omission can be stated rather than
+    hidden. Host validation still runs against the *full* diff — this only shapes
+    what the model reads.
+    """
+    sections: list[list[str]] = []
+    current: list[str] = []
+    for line in diff.splitlines(keepends=True):
+        if line.startswith("diff --git ") and current:
+            sections.append(current)
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        sections.append(current)
+
+    kept: list[str] = []
+    dropped: list[str] = []
+    for section in sections:
+        header = _DIFF_HEADER.match(section[0].rstrip("\n")) if section else None
+        path = header.group("b") if header else None
+        is_binary = any(line.startswith("Binary files") for line in section)
+        if (path is not None and _is_generated(path)) or is_binary:
+            dropped.append(path or "(binary)")
+            continue
+        kept.extend(section)
+    return "".join(kept), dropped
+
+
 def _admit(token: str) -> bool:
     return (
         len(token) >= _MIN_TOKEN_LEN

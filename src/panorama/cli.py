@@ -17,6 +17,7 @@ from panorama.delivery import (
     assert_postable,
     build_comment_body,
 )
+from panorama.demo import DemoSeeder, demo_repo_names
 from panorama.doctor import render_report, run_doctor
 from panorama.errors import IntakeError, PanoramaError
 from panorama.fixtures import bootstrap as bootstrap_fixtures
@@ -29,7 +30,7 @@ from panorama.intake import (
 from panorama.provision import WorkspaceProvisioner
 from panorama.render import render_markdown, review_json_obj
 from panorama.retrieval import retrieve
-from panorama.review import run_review
+from panorama.review import context_truncated, run_review
 from panorama.validation import validate_review
 from panorama.workspace import Workspace
 
@@ -178,7 +179,8 @@ def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
     retrieval = retrieve(pull_request, workspace)
     result = run_review(pull_request, workspace, retrieval, runner=runner)
     validated = validate_review(result.data, pull_request, workspace)
-    return validated, retrieval.truncated
+    truncated = retrieval.truncated or context_truncated(pull_request.diff)
+    return validated, truncated
 
 
 def _emit(pull_request, validated, truncated: bool, *, json_output: bool) -> None:
@@ -261,10 +263,56 @@ def _post_review(owner, repo, number, pull_request, validated, truncated: bool) 
     typer.echo(f"Posted review comment ({action}) on {owner}/{repo}#{number}.")
 
 
-# --- Extension point -------------------------------------------------------
-# Other agents attach additional subcommands here, e.g.:
-#     app.command()(demo)
-# -----------------------------------------------------------------------------
+@app.command()
+def demo(
+    github: str = typer.Option(
+        ...,
+        "--github",
+        metavar="OWNER",
+        help="GitHub owner (user or org) to seed the private demo under.",
+    ),
+    recreate: bool = typer.Option(
+        False,
+        "--recreate",
+        help="Replace demo repositories that already exist (needs the delete_repo scope).",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        help="Skip the confirmation prompt (for non-interactive use).",
+    ),
+) -> None:
+    """Seed the mock organisation as PRIVATE GitHub repos and open the demo PRs.
+
+    This CREATES private repositories in your GitHub account and opens pull
+    requests in them — the one command that writes to GitHub. It always confirms
+    first (unless --yes) and is never run by automated tests.
+    """
+    names = demo_repo_names()
+    typer.echo(
+        f"This will create {len(names)} PRIVATE repositories under '{github}' "
+        f"({', '.join(names)}) and open a pull request for each seeded change."
+    )
+    if recreate:
+        typer.echo("--recreate: any existing repositories with these names will be DELETED first.")
+    if not yes:
+        typer.confirm("Proceed?", abort=True)
+
+    try:
+        result = DemoSeeder(github, recreate=recreate).seed()
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    typer.echo(
+        f"Seeded {len(result.repos)} repositories under '{github}' "
+        f"with {len(result.prs)} pull request(s):"
+    )
+    for pr in result.prs:
+        suffix = f" -> {pr.url}" if pr.url else ""
+        typer.echo(f"  {result.owner}/{pr.repo} [{pr.branch}]{suffix}")
+    typer.echo("")
+    typer.echo("Review one with:  panorama review <owner>/<repo>#<number> [--post]")
 
 
 if __name__ == "__main__":

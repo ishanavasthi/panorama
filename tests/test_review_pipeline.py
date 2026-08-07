@@ -27,8 +27,14 @@ from panorama.fixtures import bootstrap
 from panorama.intake import LocalPullRequestSource
 from panorama.models import Evidence, Finding, Review
 from panorama.render import render_markdown, review_json_obj
-from panorama.retrieval import RetrievalResult, retrieve
-from panorama.review import build_review_prompt, run_review
+from panorama.retrieval import RetrievalResult, filter_diff, retrieve
+from panorama.review import (
+    MAX_DIFF_CHARS,
+    build_review_prompt,
+    context_truncated,
+    prepare_diff,
+    run_review,
+)
 from panorama.screening import contains_secret, is_clean
 from panorama.validation import (
     ValidatedReview,
@@ -393,6 +399,49 @@ def test_review_json_obj_is_reference_only_and_structured(pr, retrieval) -> None
 # ---------------------------------------------------------------------------
 # prompt assembly
 # ---------------------------------------------------------------------------
+
+
+def _multi_file_diff(*files: tuple[str, str]) -> str:
+    parts = []
+    for path, added in files:
+        parts.append(
+            f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n@@ -1 +1 @@\n+{added}\n"
+        )
+    return "".join(parts)
+
+
+def test_filter_diff_drops_generated_and_binary_sections() -> None:
+    diff = (
+        _multi_file_diff(("src/app.ts", "realChange"), ("package-lock.json", "lockNoise"))
+        + "diff --git a/logo.png b/logo.png\nBinary files a/logo.png and b/logo.png differ\n"
+    )
+    filtered, dropped = filter_diff(diff)
+    assert "realChange" in filtered
+    assert "lockNoise" not in filtered and "logo.png" not in filtered
+    assert set(dropped) == {"package-lock.json", "logo.png"}
+
+
+def test_prepare_diff_caps_oversized_diffs_and_flags_truncation() -> None:
+    big = "diff --git a/big.ts b/big.ts\n--- a/big.ts\n+++ b/big.ts\n@@ -1 +1 @@\n" + (
+        "+x\n" * (MAX_DIFF_CHARS // 2)
+    )
+    text, truncated, _dropped = prepare_diff(big)
+    assert truncated
+    assert context_truncated(big)
+    assert "truncated" in text.lower()
+    assert len(text) <= MAX_DIFF_CHARS + 200
+
+
+def test_prompt_omits_generated_files_and_notes_them(pr, retrieval, workspace) -> None:
+    noisy = pr.model_copy(
+        update={
+            "diff": pr.diff
+            + _multi_file_diff(("yarn.lock", "generatedTokenXYZ"))
+        }
+    )
+    prompt = build_review_prompt(noisy, retrieval, workspace.org_map_markdown())
+    assert "generatedTokenXYZ" not in prompt
+    assert "omitted" in prompt.lower()
 
 
 def test_prompt_places_rubric_first_and_reminder_last(pr, retrieval, workspace) -> None:

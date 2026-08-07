@@ -26,13 +26,39 @@ from panorama.prompts import (
     SCHEMA_REPAIR_INSTRUCTION,
     UNTRUSTED_CONTENT_REMINDER,
 )
-from panorama.retrieval import RetrievalResult
+from panorama.retrieval import RetrievalResult, filter_diff
 from panorama.workspace import Workspace
 
 #: Retrieval leads are orientation, not proof. Cap how many are named in the
 #: prompt so a noisy diff cannot crowd out the diff itself; the model can always
 #: search the workspace for more.
 _MAX_LEADS_IN_PROMPT = 30
+
+#: Upper bound on the diff text embedded in the prompt (characters). A pull
+#: request larger than this is truncated with a marker; the report says so. The
+#: cap applies *after* generated/binary sections are filtered out.
+MAX_DIFF_CHARS = 60_000
+
+_DIFF_TRUNCATION_MARKER = "\n... [diff truncated: exceeds the review size cap] ...\n"
+
+
+def prepare_diff(diff: str) -> tuple[str, bool, list[str]]:
+    """Shape a raw diff for the prompt: filter noise, then cap its size.
+
+    Returns ``(text, truncated, dropped_paths)`` — the text to embed, whether it
+    was size-capped, and the generated/binary paths that were removed.
+    """
+    filtered, dropped = filter_diff(diff)
+    truncated = len(filtered) > MAX_DIFF_CHARS
+    if truncated:
+        filtered = filtered[:MAX_DIFF_CHARS] + _DIFF_TRUNCATION_MARKER
+    return filtered, truncated, dropped
+
+
+def context_truncated(diff: str) -> bool:
+    """Whether embedding ``diff`` in the prompt requires size truncation."""
+    filtered, _ = filter_diff(diff)
+    return len(filtered) > MAX_DIFF_CHARS
 
 
 def _fenced(label: str, body: str) -> str:
@@ -95,6 +121,15 @@ def build_review_prompt(
     )
     body = pr.body.strip() or "(no description provided)"
 
+    diff_text, _truncated, dropped = prepare_diff(pr.diff)
+    if not diff_text.strip():
+        diff_text = "(empty diff)"
+    if dropped:
+        diff_text += (
+            f"\n\n[{len(dropped)} generated/binary file(s) omitted from this diff "
+            "as low-signal; they are not part of the review.]"
+        )
+
     sections = [
         REVIEW_SYSTEM_PROMPT,
         "",
@@ -112,7 +147,7 @@ def build_review_prompt(
         "",
         _fenced("PR DESCRIPTION", body),
         "",
-        _fenced("PR DIFF", pr.diff.strip() or "(empty diff)"),
+        _fenced("PR DIFF", diff_text),
         "",
         UNTRUSTED_CONTENT_REMINDER,
     ]
