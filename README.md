@@ -16,13 +16,7 @@ integration of any kind — no SDK, no HTTP call, no API key. If `claude` isn't
 installed and signed in, Panorama has no fallback. See `CLAUDE.md` for the
 full list of constraints this project is built against.
 
-> **Loom walkthrough:** _add link here_ — a short demo, the architecture and
-> major decisions, known limitations, what's next, and how AI tools were used.
-
-This README is the submission's written companion to that video. It covers
-setup and run instructions (below), and mirrors the video's architecture,
-decisions, limitations, next-steps, and AI-use notes further down so they can
-be read without watching.
+> **Demo:** https://link.ishanavasthi.in/panorama-video
 
 ## Prerequisites
 
@@ -148,18 +142,32 @@ uv run panorama review <your-user-or-org>/acme-api#1 --post
 
 One pipeline runs for every review, regardless of where the PR came from:
 
-```
-panorama review <PR>
-  intake     PR metadata + diff             -> normalized PullRequest
-  workspace  clone/fetch every sibling repo -> PR repo pinned at head SHA (0700, locked)
-  retrieve   diff -> generic signals        -> bounded git-grep across siblings + org map + convention docs
-  review     local claude CLI, Read/Grep/Glob only, sandboxed -> JSON review
-  validate   repo/path/line/SHA + foreign-evidence + secret screen -> discard unsupported findings
-  deliver    Markdown / --json / idempotent --post
+```mermaid
+flowchart LR
+    PR["PR reference<br/>owner/repo#n or URL"]
+
+    subgraph PIPE["panorama review — one pipeline"]
+        direction LR
+        INTAKE["intake<br/>PR metadata + diff<br/>normalized PullRequest"]
+        WORKSPACE["workspace<br/>clone/fetch siblings<br/>PR repo pinned at head SHA<br/>(private, 0700, locked)"]
+        RETRIEVE["retrieve<br/>diff to generic signals<br/>bounded git-grep across siblings<br/>+ org map + convention docs"]
+        REVIEW["review<br/>local claude CLI<br/>Read/Grep/Glob only, sandboxed<br/>JSON-schema output"]
+        VALIDATE["validate<br/>repo/path/line/SHA checks<br/>foreign-evidence + secret screen<br/>discard unsupported findings"]
+        INTAKE --> WORKSPACE --> RETRIEVE --> REVIEW --> VALIDATE
+    end
+
+    DELIVER["deliver<br/>Markdown · --json<br/>idempotent --post"]
+
+    PR --> PIPE
+    VALIDATE --> DELIVER
+
+    classDef ai fill:#f4e6ff,stroke:#7a3fb0,color:#2b1240;
+    classDef guard fill:#e6f4ff,stroke:#2f6fb0,color:#0d2436;
+    class REVIEW ai;
+    class VALIDATE guard;
 ```
 
-A diagram of the same flow lives in `docs/architecture.mmd` (paste into
-<https://mermaid.live> or any Mermaid preview). The load-bearing ideas:
+Key properties:
 
 - **Two sources, one shape.** A local fixture branch and a GitHub PR both
   normalize to the same `PullRequest`, so retrieval, review, validation, and
@@ -169,12 +177,11 @@ A diagram of the same flow lives in `docs/architecture.mmd` (paste into
   code finds likely cross-repo context; Claude reviews with that context;
   then host code re-checks every citation against the real files. A finding
   whose evidence doesn't resolve is **discarded, never downgraded**.
-- **The Claude boundary is the whole security story.** The only AI integration
+- **The Claude boundary defines the security model.** The only AI integration
   is the local `claude` CLI on its subscription — no SDK, no HTTP, no API key.
   It runs read/search-only, with the user's personal config, plugins, and MCP
-  servers switched off, scoped to the workspace, under a wall-clock timeout.
-  What was empirically verified about that boundary is written up in
-  `docs/m0-claude-boundary.md`.
+  servers disabled, scoped to the workspace, under a wall-clock timeout. The
+  boundary was verified empirically; see `docs/m0-claude-boundary.md`.
 - **Reference-only by construction.** The output schema has no field for a
   source excerpt, so a finding can only ever be a `repo/path:line` pointer —
   safe to post on a repo whose readers can't see the cited repo's source.
@@ -212,23 +219,23 @@ The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
   of a finding is not proof of safety — Panorama is a reviewer's assistant, not
   a merge gate.
 
-## What I'd build next
+## Future work
 
-- Configurable repository selection instead of cloning the whole org.
+- Configurable repository selection instead of cloning the entire organisation.
 - Stronger semantic retrieval to catch links with no shared vocabulary.
 - A GitHub App / webhook delivery path for automatic PR triggers.
-- Inline line-level review comments, not just one summary comment.
+- Inline line-level review comments in addition to the summary comment.
 - Permission-aware evidence, so a cited location respects who can see which repo.
 
-## How I used AI tools
+## Use of AI tools during development
 
-AI was used throughout development as a coding partner — scaffolding modules,
-writing tests, and drafting docs — while I directed the architecture, the
-milestone sequencing, and every security boundary, and reviewed all of it. One
-milestone (M0) was deliberately handed to an adversarial AI review that found
-two real security defects a green test suite had missed. In the shipped
-product, the *only* runtime AI dependency is the local Claude Code CLI that
-performs the review itself.
+AI tools were used throughout development as a coding assistant — scaffolding
+modules, writing tests, and drafting documentation — with architecture,
+milestone sequencing, and every security boundary directed and reviewed by the
+author. One milestone (M0) was subjected to an adversarial AI review that
+surfaced two security defects the passing test suite had missed. In the shipped
+product, the sole runtime AI dependency is the local Claude Code CLI that
+performs the review.
 
 ## Status
 
