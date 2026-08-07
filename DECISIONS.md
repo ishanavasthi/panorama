@@ -407,6 +407,49 @@ machine's default subscription, exactly as the README describes.
 
 ---
 
+## S7 — GitHub pull-request intake
+
+### What S7 shipped
+
+A second pull-request *source*. `GitHubPullRequestSource` turns an `owner/repo#n`
+reference or a GitHub PR URL into the exact same `PullRequest` shape the local
+source produces, using `gh` and nothing else. This is the local-first bet paying
+off: GitHub becomes an input to a pipeline already proven end to end, not a
+prerequisite for finding out whether the idea works.
+
+### Decisions worth recording
+
+- **`gh` owns the GitHub credential, so it is run with the normal environment.**
+  This is the deliberate opposite of the `claude` child, which is stripped to a
+  three-name allowlist precisely so it can never see a credential. `gh` is the
+  tool the credential belongs to; Panorama never reads, stores, or prints a
+  token, and it never echoes raw `gh` stderr — a failure becomes a host-authored,
+  actionable message, because stderr is the most likely place a token hint or an
+  operator path would surface.
+- **Two REST reads via `gh api`, not a clone and not `gh pr diff`.** The
+  pull-request object gives reliable base/head SHAs and refs; the same object
+  requested with an `Accept: …diff` header gives the unified diff. Both resolve a
+  fork PR without ever fetching the fork, which keeps intake cheap and side-effect
+  free — no working tree, no checkout — and defers all cloning to S8 where it
+  belongs.
+- **Intake lands now; cross-repository review waits for the workspace.** A GitHub
+  PR cannot be reviewed across its siblings until those siblings are cloned into a
+  workspace (S8). Rather than pretend, the CLI's GitHub path normalizes the pull
+  request and stops there, saying so. The `PullRequest` it produces is
+  byte-for-byte the shape the local pipeline already consumes, so S8 adds a
+  workspace and nothing else changes.
+
+### How it was verified
+
+Offline tests drive a fake `gh` through success, a fork PR, a `gh` failure (with
+a planted token proving stderr never leaks), a missing binary, non-JSON output,
+and missing SHAs. The field assumptions were then confirmed against the real
+`gh` on a live public pull request — base/head SHAs, refs, URL, title, and diff
+all normalized as expected. No private repositories were needed: intake reads any
+accessible PR, and seeding the private demo org is a later, separate milestone.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:

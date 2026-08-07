@@ -90,12 +90,29 @@ variance observed was on P3, where one pass additionally surfaced a low-severity
 `duplicate_logic` finding (also correctly cited); the core convention findings
 were stable. No prompt or retrieval tuning was required.
 
+## Reviewing a GitHub pull request
+
+Panorama can also read a real pull request through `gh` (which must be
+installed and signed in — `gh auth login`):
+
+```bash
+uv run panorama review owner/repo#123          # or a full PR URL
+uv run panorama review owner/repo#123 --json   # the normalized pull request
+```
+
+Intake works today: the PR is normalized into the same shape a local review
+uses, across a fork boundary, with no clone. The full cross-repository review
+of a GitHub PR additionally needs its sibling repositories cloned into a
+workspace, which is the next milestone (S8); until then the GitHub path
+performs intake and stops there rather than pretending to review. Panorama
+never reads, stores, or prints a GitHub token — `gh` owns that credential.
+
 ## Status
 
-Working local-first V1. Implemented: `panorama doctor`, `panorama fixtures
-bootstrap`, and `panorama review --local` end to end (retrieval, Claude review,
-host validation, reference-only rendering, `--json`). Not yet wired up: GitHub
-PR intake, multi-repo cloning, `--post`, and `demo --github` — these widen the
-input surface from local fixtures to live GitHub and are the next milestones.
-See `v1plan.md` for the build order and `DECISIONS.md` for the reasoning behind
-the major choices.
+Working local-first V1, complete through real evaluation (the plan's cut line).
+Implemented: `panorama doctor`, `panorama fixtures bootstrap`, `panorama review
+--local` end to end (retrieval → Claude review → host validation →
+reference-only rendering, `--json`), and GitHub PR **intake** (`owner/repo#n` or
+URL). Not yet wired up: multi-repo cloning (so GitHub PRs can be reviewed
+cross-repo), `--post`, and `demo --github`. See `v1plan.md` for the build order
+and `DECISIONS.md` for the reasoning behind the major choices.

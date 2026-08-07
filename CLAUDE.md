@@ -152,7 +152,7 @@ any GitHub code exists. Full exit criteria live in `v1plan.md`.
 - [x] **S5** — Claude review + evidence validator + reference-only renderer
 - [x] **S6** — real evaluation on P1–P4, at most two tunings ← **cut line:
       the project is complete and demonstrable here**
-- [ ] **S7** — GitHub PR intake via `gh` (second source, same pipeline)
+- [x] **S7** — GitHub PR intake via `gh` (second source, same pipeline)
 - [ ] **S8** — real multi-repo workspace: org listing, clone/fetch/checkout
 - [ ] **S9** — delivery: `--json`, idempotent `--post`, exit codes, screening
 - [ ] **S10** — live private demo seeding and hardening
