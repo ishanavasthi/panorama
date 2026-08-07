@@ -1,0 +1,4 @@
+{
+  "title": "Add redirect endpoint",
+  "body": "Adds GET /r/:id to resolve a short id to its destination and return it with the time it was accessed."
+}

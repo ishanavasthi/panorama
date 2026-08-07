@@ -1,0 +1,9 @@
+{
+  "name": "acme-web",
+  "version": "1.0.0",
+  "description": "Web client that consumes the acme-api link response.",
+  "main": "src/render.ts",
+  "dependencies": {
+    "acme-shared": "^1.0.0"
+  }
+}

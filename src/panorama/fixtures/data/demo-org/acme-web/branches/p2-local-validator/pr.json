@@ -1,0 +1,4 @@
+{
+  "title": "Validate URLs before rendering links",
+  "body": "Adds a small validateUrl helper and guards renderLink with it so malformed destinations are not turned into anchors."
+}

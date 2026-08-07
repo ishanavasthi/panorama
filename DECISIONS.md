@@ -166,6 +166,44 @@ incapable of finding.
   subscription rather than shipping code to a new vendor, and never republish
   another repo's source in the output.
 
+## S1 — the local fixture organisation
+
+### The decision
+
+The graded question is how well Panorama uses *cross-repository* context, and a
+small local organisation can demonstrate that with no GitHub, no cloning, and
+no network. So the first thing built after the boundary is the mock org itself:
+four intentionally-coupled repositories and the four seed changes that couple
+them.
+
+### What S1 shipped
+
+`panorama fixtures bootstrap` turns checked-in source data into four real git
+repositories under `.panorama/demo-org/` — `acme-api`, `acme-web`,
+`acme-shared`, `acme-contracts` — each on a `main` branch, with four seed
+branches carrying the defects the review has to catch: a response-field rename
+that breaks a consumer, a duplicated URL validator, an endpoint that ignores
+the org's error/timestamp conventions, and a documentation-only control that
+must *not* produce a cross-repo finding. Each defect is visible through a plain
+`git diff main <branch>`.
+
+### Why it is shaped this way
+
+- **The fixtures are data; the bootstrap is generic.** The command knows
+  nothing about repo names, field names, branch names, or expected findings —
+  it just materialises whatever the data tree describes. That keeps constraint
+  #2 (no fixture specifics in production code) true by construction, and a test
+  asserts the production modules contain none of those tokens.
+- **Real git, not a directory of files.** Branches and SHAs are what later
+  milestones read to build a normalized `PullRequest`, so the fixtures are the
+  same kind of object a real PR is — a diff between two commits.
+- **Built under `.panorama/`, gitignored.** No nested `.git` is ever committed
+  to the outer repository; the mock org is a reproducible build artifact, not
+  checked-in history.
+- **Idempotent and safe.** Re-running rebuilds cleanly by reclaiming its own
+  prior checkouts, but it refuses to delete a directory that is not
+  recognisably a previous bootstrap unless `--force` is given.
+
 ---
 
 ## Standing limitations of V1

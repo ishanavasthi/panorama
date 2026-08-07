@@ -144,7 +144,7 @@ any GitHub code exists. Full exit criteria live in `v1plan.md`.
 - [x] **M0** — scaffold + prove the `claude` CLI boundary. Verified; written up
       in `docs/m0-claude-boundary.md`.
 - [ ] **S0** — minimal README so a fresh clone is runnable
-- [ ] **S1** — four fixture repos + bootstrap, P1–P4 branches
+- [x] **S1** — four fixture repos + bootstrap, P1–P4 branches
 - [ ] **S2** — local PR intake (`--local`), SHA capture
 - [ ] **S3** — workspace view over the fixtures + org map
 - [ ] **S4** — deterministic retrieval: diff signals, stopwords, sibling

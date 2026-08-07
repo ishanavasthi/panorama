@@ -1,0 +1,4 @@
+{
+  "title": "Rename link response field url to target_url",
+  "body": "Renames the `url` field on the link response to `target_url` for clarity. Updates the response type and the handler that builds it."
+}

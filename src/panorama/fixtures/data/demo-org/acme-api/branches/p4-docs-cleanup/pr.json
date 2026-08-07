@@ -1,0 +1,4 @@
+{
+  "title": "Clarify README and handler comments",
+  "body": "Documentation-only cleanup: expands the README with development notes and clarifies the comment on the link response builder. No behaviour change."
+}

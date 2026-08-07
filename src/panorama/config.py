@@ -20,6 +20,11 @@ from pathlib import Path
 WORKSPACE_ROOT = Path.home() / ".panorama" / "workspaces"
 RUN_ARTIFACT_ROOT = Path(".panorama") / "runs"
 
+#: Where `panorama fixtures bootstrap` materialises the local mock organisation
+#: as real git repositories. Under `.panorama/` so it is gitignored and never
+#: committed (no nested `.git` reaches the outer repo), relative to the cwd.
+DEMO_ORG_ROOT = Path(".panorama") / "demo-org"
+
 _DIR_MODE = stat.S_IRWXU  # 0700: read/write/execute for owner only
 
 

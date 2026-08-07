@@ -6,10 +6,14 @@ agents attach the real subcommands (`review`, `fixtures`, `demo`, ...) here.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
 from panorama import __version__
 from panorama.doctor import render_report, run_doctor
+from panorama.errors import PanoramaError
+from panorama.fixtures import bootstrap as bootstrap_fixtures
 
 app = typer.Typer(
     name="panorama",
@@ -61,10 +65,53 @@ def doctor(
     raise typer.Exit(report.exit_code)
 
 
+fixtures_app = typer.Typer(
+    name="fixtures",
+    help="Manage the local mock organisation used for offline review.",
+    no_args_is_help=True,
+)
+app.add_typer(fixtures_app)
+
+
+@fixtures_app.command("bootstrap")
+def fixtures_bootstrap(
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help=(
+            "Rebuild target repositories even if they already exist and are "
+            "not recognisably a prior bootstrap."
+        ),
+    ),
+    dest: str | None = typer.Option(
+        None,
+        "--dest",
+        help="Where to build the repositories (default: .panorama/demo-org).",
+    ),
+) -> None:
+    """Build the four fixture repos as local git repositories with P1–P4 branches.
+
+    Idempotent: re-running rebuilds each repository from the checked-in fixture
+    data. Nothing here reaches the network, `gh`, or a Claude subscription.
+    """
+    dest_root = Path(dest) if dest is not None else None
+    try:
+        result = bootstrap_fixtures(dest_root=dest_root, force=force)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    typer.echo(f"Built {len(result.repos)} fixture repositories under {result.root}:")
+    for repo in result.repos:
+        # The main branch is always present; list the seeded branches after it.
+        seeded = [b for b in repo.branches if b != "main"]
+        suffix = f" (branches: {', '.join(seeded)})" if seeded else ""
+        typer.echo(f"  {repo.name}{suffix}")
+
+
 # --- Extension point -------------------------------------------------------
 # Other agents attach additional subcommands here, e.g.:
 #     app.command()(review)
-#     app.command()(fixtures)
 #     app.command()(demo)
 # -----------------------------------------------------------------------------
 
