@@ -306,6 +306,60 @@ convention-doc channel rather than forced with fixture-specific tuning.
 
 ---
 
+## S5 — review, host validation, and reference-only rendering
+
+### What S5 shipped
+
+The walking skeleton: `panorama review --local <repo> --head <branch>` now runs
+end to end — intake, workspace, retrieval, a real Claude review, host validation,
+and a rendered report. Three new pieces sit between retrieval and the user: a
+prompt assembler that hands the model the diff plus deterministic leads, a
+host-side validator that re-checks every finding against ground truth, and a
+reference-only renderer.
+
+### Decisions worth recording
+
+- **The model finds; the host verifies; failing findings are discarded, never
+  downgraded.** This was always the design intent, and S5 makes it real. Each
+  finding must clear four independent checks: its text passes secret screening,
+  at least one piece of evidence resolves to a real in-bounds line on disk, a
+  cross-repository finding cites at least one repository *outside* the pull
+  request, and any pull-request location it names matches a line the diff
+  actually changed. A finding that fails any check is dropped and counted in the
+  report — never quietly softened to a lower severity, because a review the
+  reader cannot trust is worse than a shorter one.
+- **Silence is always explained.** Zero surviving findings renders as an explicit
+  "no supported cross-repository impact detected", and the discard count and any
+  retrieval truncation are always stated. An empty report would be
+  indistinguishable from a tool that did nothing.
+- **The host will not assert a disposition it cannot support.** If every finding
+  is discarded, the rendered verdict falls back to a neutral "comment" even if
+  the model asked for "request changes" — the host has nothing left to justify a
+  stronger call.
+- **Source quotation is prevented structurally, not by detection.** The schema
+  has no field to hold a source excerpt and the prompt forbids quoting, so the
+  renderer prints only `repo/path:line`. The one residual risk — a credential a
+  model might echo inside a sentence — is caught by host secret-shape screening.
+  We deliberately did *not* build a general "is this quoted source code?"
+  detector: it would be fuzzy and would discard real findings for false reasons.
+- **The prompt states the trust boundary first and last.** The rubric leads, the
+  untrusted diff and leads sit in the middle clearly fenced, and a reminder that
+  repository text carries no authority closes the prompt — so the boundary is
+  the last thing read before the model answers. Retrieval leads are labelled as
+  leads to confirm, not evidence, matching the "a search hit is not proof" rule.
+
+### A limitation this surfaced
+
+In local mode the pull request's own repository is presented at its main `HEAD`,
+not checked out at the branch under review. The change itself is fully conveyed
+by the diff, and every *sibling* is at its real `HEAD`, so cross-repository
+findings — the graded ones — validate correctly. The gap is only that evidence
+pointing *into the PR's own repo* is checked against main rather than the branch.
+A detached checkout at the immutable head SHA is deliberately deferred to S8
+(real multi-repo workspace) rather than front-loaded here.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:
