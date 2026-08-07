@@ -147,7 +147,7 @@ any GitHub code exists. Full exit criteria live in `v1plan.md`.
 - [x] **S1** — four fixture repos + bootstrap, P1–P4 branches
 - [x] **S2** — local PR intake (`--local`), SHA capture
 - [x] **S3** — workspace view over the fixtures + org map
-- [ ] **S4** — deterministic retrieval: diff signals, stopwords, sibling
+- [x] **S4** — deterministic retrieval: diff signals, stopwords, sibling
       `git grep`, hit windows, convention-doc discovery
 - [ ] **S5** — Claude review + evidence validator + reference-only renderer
 - [ ] **S6** — real evaluation on P1–P4, at most two tunings ← **cut line:

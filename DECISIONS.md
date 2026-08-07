@@ -260,6 +260,52 @@ summary, top-level paths, and any organisation convention documents.
 
 ---
 
+## S4 — deterministic cross-repository retrieval
+
+### What S4 shipped
+
+The step that turns a diff into *orientation*: a small, ranked set of generic
+signals pulled from the PR diff, the sibling-repository lines those signals
+match (found with bounded `git grep`), and a relevance ranking of the siblings
+themselves — plus the convention documents discovered on the neighbours. This
+is what the review runs against, before any model is involved.
+
+### Decisions worth recording
+
+- **Signals are generic shapes, not known names.** The diff is read for
+  public-looking fields (`name:`), route literals, added function/class names,
+  and other changed identifiers — each weighted by how contract-like it is. A
+  stopword list of language keywords and ubiquitous builtins, plus
+  generated/lockfile/binary filtering, keeps the noise out. There is no fixture
+  repo name, field name, or expected finding anywhere in the code; it keys only
+  off the diff and the workspace.
+- **Siblings are ranked by *distinct* matched signals, discounted by how widely
+  each signal spreads.** A token that matches one repository is discriminating;
+  one that matches everywhere is nearly worthless. Dividing each signal's weight
+  by the number of repositories it hits (an IDF-like discount) is what pushes
+  the true consumer to the top instead of whichever repo is simply largest.
+- **Everything is capped and explainable.** Retrieval is orientation, not an
+  index: a fixed number of signals searched, hits per signal per repo, and total
+  hits, each hit carrying a `repo/path:line` and a small context window. Every
+  surfaced repository can be justified by which signal matched which line — no
+  embeddings, no parser, nothing opaque.
+- **The polarity fix.** A token first seen as a weak identifier and later
+  upgraded to a higher-weight field was silently losing its earlier add/remove
+  record. Polarity now accumulates across every sighting, so a removed-then-
+  reshaped field still reports as both — information the review step will lean on
+  to reason about who still consumes the old shape.
+
+### A limitation this surfaced
+
+On the convention-violation PR (P3), the intended neighbour ties on score with
+other siblings rather than leading outright — the violation is about *absent*
+convention adherence, which leaves a weaker lexical footprint than a rename or a
+duplicated helper. Retrieval still pulls the right repo and its convention
+documents into context; ranking it first is left to the model and the
+convention-doc channel rather than forced with fixture-specific tuning.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:
