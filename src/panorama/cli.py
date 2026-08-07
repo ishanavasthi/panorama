@@ -11,10 +11,16 @@ from pathlib import Path
 import typer
 
 from panorama import __version__
+from panorama.claude_runner import ClaudeRunner
 from panorama.doctor import render_report, run_doctor
 from panorama.errors import EXIT_GENERAL_ERROR, PanoramaError
 from panorama.fixtures import bootstrap as bootstrap_fixtures
-from panorama.intake import LocalPullRequestSource, PullRequest, resolve_local_repo
+from panorama.intake import LocalPullRequestSource, resolve_local_repo
+from panorama.render import render_markdown, review_json_obj
+from panorama.retrieval import retrieve
+from panorama.review import run_review
+from panorama.validation import validate_review
+from panorama.workspace import Workspace
 
 app = typer.Typer(
     name="panorama",
@@ -110,30 +116,6 @@ def fixtures_bootstrap(
         typer.echo(f"  {repo.name}{suffix}")
 
 
-def _render_intake_summary(pr: PullRequest) -> str:
-    """A short, safe summary of a normalized pull request.
-
-    Deliberately does not print the diff body: even for local fixtures we keep
-    the discipline of not dumping repository source to stdout. `--json` is the
-    way to see the full normalized bundle.
-    """
-    files_changed = sum(1 for line in pr.diff.splitlines() if line.startswith("diff --git"))
-    diff_lines = pr.diff.count("\n")
-    return "\n".join(
-        [
-            "Local pull request",
-            f"  repo:   {pr.owner}/{pr.repo}",
-            f"  base:   {pr.base_ref} ({pr.base_sha[:7]})",
-            f"  head:   {pr.head_ref} ({pr.head_sha[:7]})",
-            f"  title:  {pr.title}",
-            f"  diff:   {files_changed} file(s) changed, {diff_lines} diff line(s)",
-            "",
-            "Intake only: the review pipeline is not wired up yet (lands in S5).",
-            "Use --json to see the full normalized pull request.",
-        ]
-    )
-
-
 @app.command()
 def review(
     target: str | None = typer.Argument(
@@ -151,10 +133,15 @@ def review(
     json_output: bool = typer.Option(
         False,
         "--json",
-        help="Emit the normalized pull request as JSON instead of a summary.",
+        help="Emit the validated review as JSON instead of Markdown.",
     ),
 ) -> None:
-    """Review a pull request. This build wires up local intake (`--local`) only."""
+    """Review a pull request end to end. This build wires up `--local` only.
+
+    Pipeline: intake -> workspace -> deterministic retrieval -> Claude review
+    -> host evidence validation -> reference-only rendering. Findings that fail
+    validation are discarded, never downgraded; the report says how many.
+    """
     if local is not None and target is not None:
         raise typer.BadParameter("pass either --local or a GitHub PR reference, not both.")
     if local is None:
@@ -171,14 +158,30 @@ def review(
     try:
         repo_path = resolve_local_repo(local)
         pull_request = LocalPullRequestSource(repo_path, base, head).load()
+        # The workspace is the organisation directory the repo lives in, so one
+        # search spans every sibling. Grant exactly that root to the child.
+        workspace = Workspace(repo_path.resolve().parent)
+        retrieval = retrieve(pull_request, workspace)
+        runner = ClaudeRunner(allowed_workspace_roots=[workspace.root])
+        result = run_review(pull_request, workspace, retrieval, runner=runner)
+        validated = validate_review(result.data, pull_request, workspace)
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
     if json_output:
-        typer.echo(pull_request.model_dump_json(indent=2))
+        import json
+
+        obj = review_json_obj(
+            pull_request, validated, retrieval_truncated=retrieval.truncated
+        )
+        typer.echo(json.dumps(obj, indent=2))
     else:
-        typer.echo(_render_intake_summary(pull_request))
+        typer.echo(
+            render_markdown(
+                pull_request, validated, retrieval_truncated=retrieval.truncated
+            )
+        )
 
 
 # --- Extension point -------------------------------------------------------

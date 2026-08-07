@@ -8,6 +8,8 @@ and that empty diffs and unknown refs are handled the way S2 requires.
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -18,6 +20,8 @@ from panorama.cli import app
 from panorama.errors import IntakeError
 from panorama.fixtures import bootstrap
 from panorama.intake import LocalPullRequestSource, resolve_local_repo
+from tests import fake_claude as sc
+from tests.conftest import FAKE_SOURCE_DIR
 
 _FULL_SHA_LEN = 40
 
@@ -136,33 +140,92 @@ def demo_org(tmp_path: Path) -> Path:
     return bootstrap(dest_root=tmp_path / "demo-org").root
 
 
-def test_review_local_json(demo_org: Path) -> None:
+@pytest.fixture
+def stub_claude(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Put ONLY a fake `claude` on PATH and drive it from a scenario.
+
+    Deliberately does not use the whole fake bin: its fake `git` would shadow
+    the real git the review pipeline needs for intake and retrieval. A dir
+    holding just `claude` is prepended, so `ClaudeRunner(executable="claude")`
+    finds the fake while every real tool stays resolvable behind it. The cwd is
+    moved to a throwaway dir so run artifacts never land in the repository.
+    """
+    bin_dir = tmp_path / "claude-only-bin"
+    bin_dir.mkdir()
+    target = bin_dir / "claude"
+    shutil.copy2(FAKE_SOURCE_DIR / "claude", target)
+    target.chmod(0o755)
+    scenario_file = bin_dir / "scenario.json"
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    workdir = tmp_path / "cwd"
+    workdir.mkdir()
+    monkeypatch.chdir(workdir)
+
+    def set_scenario(body: dict) -> None:
+        scenario_file.write_text(json.dumps(body))
+
+    return set_scenario
+
+
+def test_review_local_json(demo_org: Path, stub_claude) -> None:
     repo = demo_org / "acme-api"
+    # A well-formed review citing a real line in a sibling repository.
+    payload = sc.review(
+        verdict="request_changes",
+        findings=[
+            sc.finding(evidence_refs=[sc.evidence("acme-web", "src/api/links.ts", 1)])
+        ],
+    )
+    stub_claude(sc.scenario(sc.structured(payload)))
+
     result = CliRunner().invoke(
         app,
         ["review", "--local", str(repo), "--base", "main", "--head", "p1-rename", "--json"],
     )
     assert result.exit_code == 0, result.output
-    payload = json.loads(result.output)
-    assert payload["repo"] == "acme-api"
-    assert payload["head_ref"] == "p1-rename"
-    assert payload["base_ref"] == "main"
-    assert len(payload["head_sha"]) == _FULL_SHA_LEN
-    # The seeded rename must be present in the normalized diff.
-    assert "target_url" in payload["diff"]
+    obj = json.loads(result.output)
+    assert obj["repo"] == "demo-org/acme-api"
+    assert obj["head"]["ref"] == "p1-rename"
+    assert obj["base"]["ref"] == "main"
+    assert len(obj["head"]["sha"]) == _FULL_SHA_LEN
+    assert obj["verdict"] == "request_changes"
+    assert obj["findings"][0]["evidence"][0] == {
+        "repo": "acme-web",
+        "path": "src/api/links.ts",
+        "line": 1,
+    }
 
 
-def test_review_local_summary_hides_diff_body(demo_org: Path) -> None:
+def test_review_local_markdown_is_reference_only(demo_org: Path, stub_claude) -> None:
     repo = demo_org / "acme-api"
+    payload = sc.review(
+        verdict="request_changes",
+        findings=[
+            sc.finding(evidence_refs=[sc.evidence("acme-web", "src/api/links.ts", 1)])
+        ],
+    )
+    stub_claude(sc.scenario(sc.structured(payload)))
+
     result = CliRunner().invoke(
         app, ["review", "--local", str(repo), "--head", "p1-rename"]
     )
     assert result.exit_code == 0, result.output
-    assert "Local pull request" in result.output
-    assert "p1-rename" in result.output
-    # The default summary must not dump the diff body (hunk headers / +/- lines).
+    assert "Panorama review" in result.output
+    assert "acme-web/src/api/links.ts:1" in result.output
+    # The report must not dump the diff body (hunk headers / +/- lines).
     assert "diff --git" not in result.output
     assert "+  target_url: string;" not in result.output
+
+
+def test_review_local_empty_review_is_explicit(demo_org: Path, stub_claude) -> None:
+    repo = demo_org / "acme-api"
+    stub_claude(sc.scenario(sc.structured(sc.review(verdict="comment", findings=[]))))
+
+    result = CliRunner().invoke(
+        app, ["review", "--local", str(repo), "--head", "p4-docs-cleanup"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "No supported cross-repository impact detected." in result.output
 
 
 def test_review_requires_head(demo_org: Path) -> None:
