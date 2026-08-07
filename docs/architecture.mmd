@@ -1,0 +1,25 @@
+%% Panorama — architecture for the Loom "architecture" tab.
+%% Paste into https://mermaid.live (or open with any Mermaid preview) and
+%% keep it on a second browser tab. Left-to-right so it reads like the pipeline.
+flowchart LR
+    PR["PR reference<br/>owner/repo#n or URL<br/>(or --local fixture)"]
+
+    subgraph PIPE["panorama review — one pipeline, either source"]
+        direction LR
+        INTAKE["intake<br/>PR metadata + diff<br/>→ normalized PullRequest"]
+        WORKSPACE["workspace<br/>clone/fetch every sibling repo<br/>PR repo pinned at head SHA<br/>(private, 0700, locked)"]
+        RETRIEVE["retrieve<br/>diff → generic signals<br/>bounded git-grep across siblings<br/>+ org map + convention docs"]
+        REVIEW["review<br/>local claude CLI, Read/Grep/Glob only<br/>sandboxed, JSON-schema out"]
+        VALIDATE["validate<br/>repo/path/line/SHA checks<br/>foreign-evidence + secret screen<br/>discard unsupported findings"]
+        INTAKE --> WORKSPACE --> RETRIEVE --> REVIEW --> VALIDATE
+    end
+
+    DELIVER["deliver<br/>Markdown · --json · one idempotent --post"]
+
+    PR --> PIPE
+    VALIDATE --> DELIVER
+
+    classDef ai fill:#f4e6ff,stroke:#7a3fb0,color:#2b1240;
+    classDef guard fill:#e6f4ff,stroke:#2f6fb0,color:#0d2436;
+    class REVIEW ai;
+    class VALIDATE guard;

@@ -4,6 +4,7 @@
 # publish, and IMPLEMENT.md is superseded on ordering by v1plan.md.
 ASSIGNMENT.md
 IMPLEMENT.md
+DEMO_SCRIPT.md
 
 # --- Panorama runtime state ---
 # Cloned sibling repos, per-run artifacts and raw model output. Owner-only on
