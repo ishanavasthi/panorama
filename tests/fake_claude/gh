@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Fake `gh` for offline doctor tests.
+
+Emits a canned `auth status` whose text embeds token-shaped secrets, so a test
+can prove `panorama doctor` never echoes raw `gh` output (hard constraint #5).
+Any network-touching subcommand is refused loudly rather than attempted.
+"""
+
+from __future__ import annotations
+
+import sys
+
+SECRET_TOKEN = "gho_PANORAMA-SECRET-GH-TOKEN"
+
+NETWORKED = {"api", "repo", "pr", "issue", "clone", "release"}
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+
+    if "--version" in argv:
+        sys.stdout.write("gh version 2.96.0 (2026-01-01)\n")
+        return 0
+
+    if argv[:2] == ["auth", "status"]:
+        sys.stdout.write(
+            "github.com\n"
+            "  ✓ Logged in to github.com account fake-user (keyring)\n"
+            "  - Active account: true\n"
+            f"  - Token: {SECRET_TOKEN}\n"
+            "  - Token scopes: 'gist', 'read:org', 'repo', 'workflow'\n"
+        )
+        return 0
+
+    if argv and argv[0] in NETWORKED:
+        sys.stderr.write("fake gh: refusing a networked subcommand in offline tests\n")
+        return 70
+
+    sys.stdout.write("")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

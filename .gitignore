@@ -1,5 +1,41 @@
+# --- Project documents kept local (not part of the shipped source) ---
 CLAUDE.md
 ASSIGNMENT.md
 IMPLEMENT.md
-.DS_Store
+
+# --- Panorama runtime state ---
+# Cloned sibling repos, per-run artifacts and raw model output. Owner-only on
+# disk and never committed: it can contain private repository source.
 .panorama/
+
+# --- Python build & cache artifacts ---
+# Regenerated from pyproject.toml + uv.lock, so never needed to reproduce.
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Virtualenv ---
+# ~47MB, machine- and platform-specific. `uv sync` recreates it exactly from
+# uv.lock, which IS committed.
+.venv/
+venv/
+
+# --- Tool caches ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Editor / OS noise ---
+.DS_Store
+.idea/
+.vscode/
+*.swp

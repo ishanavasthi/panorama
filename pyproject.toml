@@ -1,0 +1,36 @@
+[project]
+name = "panorama"
+version = "0.1.0"
+description = "Cross-repo PR review CLI powered by the local Claude Code CLI."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2,<3",
+    "typer>=0.12",
+]
+
+[project.scripts]
+panorama = "panorama.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/panorama"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

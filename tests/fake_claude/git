@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Fake `git` for offline doctor tests.
+
+Only answers the read-only probes `doctor` is expected to make. Anything that
+would touch a network remote is refused so a stray call cannot escape the
+offline boundary.
+"""
+
+from __future__ import annotations
+
+import sys
+
+NETWORKED = {"clone", "fetch", "push", "pull", "ls-remote", "remote"}
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+
+    if "--version" in argv:
+        sys.stdout.write("git version 2.50.1\n")
+        return 0
+
+    if argv and argv[0] in NETWORKED:
+        sys.stderr.write("fake git: refusing a networked subcommand in offline tests\n")
+        return 70
+
+    if argv[:1] == ["rev-parse"]:
+        sys.stdout.write("0" * 40 + "\n")
+        return 0
+
+    sys.stdout.write("")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

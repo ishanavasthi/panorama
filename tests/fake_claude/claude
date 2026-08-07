@@ -1,0 +1,450 @@
+#!/usr/bin/env python3
+"""A fake `claude` CLI for Panorama's fully-offline test harness.
+
+This script impersonates the real Claude Code CLI (2.1.223) closely enough to
+drive `panorama`'s ClaudeRunner through every branch of its decision procedure,
+without any network access, subscription, or credential.
+
+Design notes
+------------
+
+*Scenario discovery must survive a stripped environment.* The production
+invocation spawns `claude` with an env allowlist of roughly {PATH, HOME, USER},
+so a `PANORAMA_FAKE_CLAUDE_*` env var would simply be deleted before this script
+ever runs. Therefore the primary channel is a **sidecar file next to this
+script** (`scenario.json`), which is always reachable via `__file__`. The
+pytest fixture copies this script into a tmp dir and writes the sidecar there.
+An env var is still honoured (it wins) for direct-invocation tests that do not
+go through the runner's env stripping.
+
+*The fake is also a constraint enforcer.* It records every invocation (argv,
+env, cwd, stdin) and flags hard-constraint violations -- a `--bare` flag, or any
+credential-shaped variable in the child environment -- into `violations.json`,
+so a test can assert the boundary held rather than merely assuming it did.
+
+Scenario file shape
+-------------------
+
+    {
+      "canary": "<string that must never leak into user-facing text>",
+      "calls":   [ <behaviour>, <behaviour>, ... ],   # indexed by invocation
+      "default": <behaviour>                          # used past the end of calls
+    }
+
+A <behaviour> is an object with a "mode" key:
+
+    {"mode": "structured",        "payload": {...}}   rc 0, structured_output present
+    {"mode": "prose",             "result": "..."}    rc 0, structured_output ABSENT
+    {"mode": "unparseable",       "stdout": "..."}    rc 0, stdout is not JSON
+    {"mode": "empty_stdout",      "rc": 1, "stderr": "..."}
+    {"mode": "runtime_error",     "subtype": "...", "terminal_reason": "..."}
+    {"mode": "auth_failure"}
+    {"mode": "hang",              "ignore_sigterm": false, "sleep": 300}
+
+Every behaviour also accepts an optional "delay" (seconds, float).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+SCENARIO_FILE = HERE / "scenario.json"
+CALLS_DIR = HERE / "calls"
+VIOLATIONS_FILE = HERE / "violations.json"
+HANG_PID_FILE = HERE / "hang_child.pid"
+
+DEFAULT_CANARY = "PANORAMA-RAW-CANARY-DO-NOT-LEAK"
+
+# Passing --bare would force ANTHROPIC_API_KEY / apiKeyHelper auth and never read
+# the OAuth keychain. It is forbidden by hard constraint #1.
+FORBIDDEN_ARGS = ("--bare",)
+
+CRED_ENV_RE = re.compile(
+    r"(ANTHROPIC|API[_-]?KEY|APIKEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|BEARER|SESSION_KEY)",
+    re.IGNORECASE,
+)
+
+DEFAULT_PAYLOAD = {
+    "summary": "No supported cross-repository impact detected.",
+    "verdict": "comment",
+    "findings": [],
+}
+
+
+# --------------------------------------------------------------------------
+# scenario loading
+# --------------------------------------------------------------------------
+
+
+def load_scenario() -> dict:
+    raw = os.environ.get("PANORAMA_FAKE_CLAUDE_SCENARIO")
+    if raw:
+        raw = raw.strip()
+        if raw.startswith("{"):
+            return json.loads(raw)
+        candidate = Path(raw)
+        if candidate.is_file():
+            return json.loads(candidate.read_text())
+    if SCENARIO_FILE.is_file():
+        return json.loads(SCENARIO_FILE.read_text())
+    return {"default": {"mode": "structured", "payload": DEFAULT_PAYLOAD}}
+
+
+def behaviour_for(scenario: dict, index: int) -> dict:
+    calls = scenario.get("calls") or []
+    if index < len(calls):
+        return calls[index]
+    default = scenario.get("default")
+    if default is not None:
+        return default
+    return {"mode": "structured", "payload": DEFAULT_PAYLOAD}
+
+
+# --------------------------------------------------------------------------
+# invocation recording
+# --------------------------------------------------------------------------
+
+
+def claim_call_slot() -> "tuple[int, Path]":
+    """Atomically reserve the next call index.
+
+    Uses O_CREAT|O_EXCL so that concurrent invocations can never collide on an
+    index, which keeps the "exactly one repair retry" assertion trustworthy.
+    """
+    CALLS_DIR.mkdir(parents=True, exist_ok=True)
+    for index in range(1000):
+        path = CALLS_DIR / f"{index:03d}.json"
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            continue
+        os.close(fd)
+        return index, path
+    raise RuntimeError("fake claude: exhausted call slots")
+
+
+def read_stdin() -> str:
+    try:
+        if sys.stdin is None or sys.stdin.isatty():
+            return ""
+    except (ValueError, OSError):
+        return ""
+    try:
+        return sys.stdin.read()
+    except (OSError, ValueError):
+        return ""
+
+
+def detect_violations(argv: "list[str]", env: dict) -> "list[str]":
+    violations = []
+    for bad in FORBIDDEN_ARGS:
+        if bad in argv:
+            violations.append(f"forbidden-arg:{bad}")
+    for key in env:
+        if CRED_ENV_RE.search(key):
+            violations.append(f"credential-shaped-env:{key}")
+    return violations
+
+
+def record_call(path: Path, index: int, argv: "list[str]", stdin_text: str) -> "list[str]":
+    env = dict(os.environ)
+    violations = detect_violations(argv, env)
+    record = {
+        "index": index,
+        "argv": argv,
+        "env": env,
+        "env_keys": sorted(env),
+        "cwd": os.getcwd(),
+        "pid": os.getpid(),
+        "pgid": os.getpgid(0),
+        "stdin": stdin_text,
+        "stdin_len": len(stdin_text),
+        "violations": violations,
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(record, indent=2, default=str))
+    os.replace(tmp, path)
+
+    if violations:
+        existing = []
+        if VIOLATIONS_FILE.is_file():
+            try:
+                existing = json.loads(VIOLATIONS_FILE.read_text())
+            except ValueError:
+                existing = []
+        existing.extend({"index": index, "violation": v} for v in violations)
+        VIOLATIONS_FILE.write_text(json.dumps(existing, indent=2))
+    return violations
+
+
+# --------------------------------------------------------------------------
+# envelope construction -- mirrors the real 2.1.223 `--output-format json` shape
+# --------------------------------------------------------------------------
+
+
+def base_envelope(canary: str) -> dict:
+    return {
+        "type": "result",
+        "subtype": "success",
+        "is_error": False,
+        "duration_ms": 13512,
+        "duration_api_ms": 11804,
+        "num_turns": 6,
+        "result": f"Fake claude prose result. {canary}",
+        "session_id": "00000000-0000-4000-8000-000000000000",
+        "uuid": "11111111-1111-4111-8111-111111111111",
+        "total_cost_usd": 0.0912,
+        "usage": {
+            "input_tokens": 12,
+            "output_tokens": 340,
+            "cache_read_input_tokens": 18021,
+            "cache_creation_input_tokens": 4096,
+        },
+        "modelUsage": {
+            "claude-sonnet-4-5": {"inputTokens": 12, "outputTokens": 340, "costUSD": 0.0912}
+        },
+        "permission_denials": [],
+        "stop_reason": "tool_use",
+        "terminal_reason": "completed",
+        "slash_commands": [],
+        "mcp_servers": [],
+        "plugins": [],
+        "agents": ["claude", "Explore", "general-purpose", "Plan"],
+        "tools": ["Glob", "Grep", "Read", "StructuredOutput"],
+        "apiKeySource": "none",
+        "permissionMode": "default",
+    }
+
+
+def emit_json(obj: dict) -> None:
+    sys.stdout.write(json.dumps(obj))
+    sys.stdout.flush()
+
+
+# --------------------------------------------------------------------------
+# side commands: `claude auth status --json`, `--version`, stream-json smoke
+# --------------------------------------------------------------------------
+
+
+def handle_auth_status(scenario: dict) -> int:
+    """Emit an `auth status --json` payload.
+
+    Deliberately includes the fields the real CLI returns that constraint #5
+    forbids printing (email, orgId, orgName) plus a token-shaped canary, so a
+    doctor test can prove none of them reach rendered output.
+    """
+    auth = scenario.get("auth")
+    if auth is None:
+        auth = {
+            "loggedIn": True,
+            "authMethod": "subscription",
+            "subscriptionType": "max",
+            "email": "PANORAMA-SECRET-EMAIL@example.invalid",
+            "organizationId": "PANORAMA-SECRET-ORG-ID",
+            "organizationName": "PANORAMA-SECRET-ORG-NAME",
+            "accessToken": "sk-ant-oat01-PANORAMA-SECRET-TOKEN",
+        }
+    emit_json(auth)
+    return 0 if auth.get("loggedIn", True) else 1
+
+
+def handle_stream_json(scenario: dict, behaviour: dict, canary: str) -> int:
+    """Emit newline-delimited events for the doctor smoke run."""
+    init = {
+        "type": "system",
+        "subtype": "init",
+        "session_id": "00000000-0000-4000-8000-000000000000",
+        "model": "sonnet",
+        "cwd": os.getcwd(),
+        "tools": ["Glob", "Grep", "Read", "StructuredOutput"],
+        "mcp_servers": [],
+        "slash_commands": [],
+        "plugins": [],
+        "agents": ["claude", "Explore", "general-purpose", "Plan"],
+        "apiKeySource": "none",
+        "permissionMode": "default",
+    }
+    init.update(scenario.get("init_overrides") or {})
+    sys.stdout.write(json.dumps(init) + "\n")
+
+    envelope = base_envelope(canary)
+    if behaviour.get("mode") == "structured":
+        payload = behaviour.get("payload", DEFAULT_PAYLOAD)
+        envelope["structured_output"] = payload
+        envelope["result"] = json.dumps(payload)
+    sys.stdout.write(json.dumps(envelope) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+# --------------------------------------------------------------------------
+# the hang scenario
+# --------------------------------------------------------------------------
+
+
+def do_hang(behaviour: dict) -> "int | None":
+    """Spawn a grandchild that outlives a naive parent-only kill, then block.
+
+    The grandchild is deliberately started WITHOUT start_new_session, so it
+    stays in this process's group. A runner that kills only the direct child
+    leaves it running; only a killpg sweep reaps it. Its stdio goes to
+    /dev/null so it does not hold the runner's stdout pipe open and stall
+    `communicate()` -- the point under test is process-group cleanup, not pipe
+    draining.
+    """
+    ignore_sigterm = bool(behaviour.get("ignore_sigterm", False))
+    sleep_for = float(behaviour.get("sleep", 300))
+
+    child_src = (
+        "import signal, sys, time\n"
+        + ("signal.signal(signal.SIGTERM, signal.SIG_IGN)\n" if ignore_sigterm else "")
+        + f"time.sleep({sleep_for})\n"
+    )
+
+    devnull = open(os.devnull, "wb")
+    child = subprocess.Popen(
+        [sys.executable, "-c", child_src],
+        stdin=subprocess.DEVNULL,
+        stdout=devnull,
+        stderr=devnull,
+    )
+
+    # Publish the grandchild PID atomically so a poller never sees a partial file.
+    tmp = HANG_PID_FILE.with_suffix(".tmp")
+    tmp.write_text(str(child.pid))
+    os.replace(tmp, HANG_PID_FILE)
+
+    if behaviour.get("handle_sigterm", True):
+        # The real CLI installs a TERM handler and exits 128+15, which is why
+        # Python observes a positive 143 rather than a negative signal code.
+        def _on_term(_signum, _frame):
+            sys.exit(143)
+
+        signal.signal(signal.SIGTERM, _on_term)
+
+    while True:
+        time.sleep(0.05)
+
+
+# --------------------------------------------------------------------------
+# main dispatch
+# --------------------------------------------------------------------------
+
+
+def dispatch(behaviour: dict, canary: str) -> int:
+    mode = behaviour.get("mode", "structured")
+
+    delay = behaviour.get("delay")
+    if delay:
+        time.sleep(float(delay))
+
+    if mode == "structured":
+        payload = behaviour.get("payload", DEFAULT_PAYLOAD)
+        envelope = base_envelope(canary)
+        envelope["structured_output"] = payload
+        envelope["result"] = json.dumps(payload)
+        envelope["stop_reason"] = "tool_use"
+        for key, value in (behaviour.get("envelope_overrides") or {}).items():
+            envelope[key] = value
+        emit_json(envelope)
+        return int(behaviour.get("rc", 0))
+
+    if mode == "prose":
+        # The critical trap: rc 0, is_error false, subtype success -- and no
+        # structured_output key at all. Only key-presence detects it.
+        envelope = base_envelope(canary)
+        envelope["result"] = behaviour.get(
+            "result", f"I cannot produce that. {canary}"
+        )
+        envelope["stop_reason"] = "end_turn"
+        envelope.pop("structured_output", None)
+        for key, value in (behaviour.get("envelope_overrides") or {}).items():
+            envelope[key] = value
+        emit_json(envelope)
+        return int(behaviour.get("rc", 0))
+
+    if mode == "unparseable":
+        sys.stdout.write(
+            behaviour.get("stdout", f"this is not JSON at all {{{{ {canary}")
+        )
+        sys.stdout.flush()
+        return int(behaviour.get("rc", 0))
+
+    if mode == "empty_stdout":
+        # Bad flag / malformed --json-schema: pre-flight failure, stdout empty.
+        sys.stderr.write(
+            behaviour.get("stderr", f"error: unknown option '--nope' {canary}")
+        )
+        sys.stderr.flush()
+        return int(behaviour.get("rc", 1))
+
+    if mode == "runtime_error":
+        envelope = base_envelope(canary)
+        envelope["is_error"] = True
+        envelope["subtype"] = behaviour.get("subtype", "error_max_budget_usd")
+        envelope["terminal_reason"] = behaviour.get("terminal_reason", "budget_exhausted")
+        envelope["errors"] = behaviour.get(
+            "errors", [{"message": f"budget exhausted {canary}"}]
+        )
+        # The real CLI omits `result` entirely on a runtime abort -- not null.
+        envelope.pop("result", None)
+        emit_json(envelope)
+        return int(behaviour.get("rc", 1))
+
+    if mode == "auth_failure":
+        envelope = base_envelope(canary)
+        envelope["subtype"] = "success"  # subtype alone is a liar here
+        envelope["is_error"] = True
+        envelope["result"] = "Not logged in · Please run /login"
+        emit_json(envelope)
+        return int(behaviour.get("rc", 1))
+
+    if mode == "hang":
+        do_hang(behaviour)
+        return 0  # unreachable
+
+    sys.stderr.write(f"fake claude: unknown mode {mode!r}\n")
+    return 64
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+    scenario = load_scenario()
+    canary = scenario.get("canary", DEFAULT_CANARY)
+
+    # Record BEFORE any early return. `--version` is a real invocation that
+    # doctor makes, and it is exactly the call site where an environment leak
+    # would show up -- returning early without recording made the credential
+    # tests structurally blind to the one call that actually inherited the
+    # parent environment.
+    index, slot = claim_call_slot()
+
+    if "--version" in argv:
+        record_call(slot, index, argv, "")
+        sys.stdout.write("2.1.223 (Claude Code)\n")
+        return 0
+
+    stdin_text = read_stdin()
+    record_call(slot, index, argv, stdin_text)
+
+    if "auth" in argv:
+        return handle_auth_status(scenario)
+
+    behaviour = behaviour_for(scenario, index)
+
+    if "stream-json" in argv:
+        return handle_stream_json(scenario, behaviour, canary)
+
+    return dispatch(behaviour, canary)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
