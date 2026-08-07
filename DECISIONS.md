@@ -360,6 +360,53 @@ A detached checkout at the immutable head SHA is deliberately deferred to S8
 
 ---
 
+## S6 — real evaluation on the fixtures
+
+### What S6 did
+
+Ran the four seeded pull requests through the whole pipeline against a real
+Claude Code subscription, twice each, and recorded the category- and
+evidence-level outcomes (never the exact model wording, which varies). This was
+deliberately scheduled *before* any GitHub plumbing: if review quality were
+poor, that had to surface while there was still time to fix retrieval, not after
+sinking effort into cloning and posting.
+
+### What it showed
+
+- **All four met their exit criteria on the first pass, with no tuning.** P1
+  produced a `contract_break` citing the consumer repo; P2 a `duplicate_logic`
+  citing the shared-helper repo; P3 two `convention` findings citing the
+  contracts repo; P4 — the control — produced no finding and a neutral verdict.
+  The plan budgeted up to two tuning iterations; none were needed.
+- **Zero findings were discarded across eight runs.** Every citation the model
+  produced resolved to a real, in-bounds line in the workspace. That is the
+  outcome the whole design aims at: deterministic retrieval orients the model,
+  the prompt insists a lead is not evidence until the file is opened, and the
+  host validator would have caught any invention — and had nothing to catch.
+- **The false-positive control held both times.** A docs-only change produced no
+  cross-repository finding, which is the result that most easily goes wrong when
+  a reviewer feels obliged to say something.
+
+### Variance, reported honestly
+
+Model output is not deterministic. The one run-to-run difference observed was on
+P3, where one pass surfaced an extra low-severity `duplicate_logic` finding
+(itself correctly cited) that the other pass did not. Severities and the core
+findings were otherwise stable. Host validation bounds the *correctness* of what
+is shown, not its *consistency* between runs — two runs may legitimately differ
+in which true findings they include.
+
+### How it was run
+
+The subscription used for evaluation lives under a non-default Claude Code
+config directory. Rather than weaken the runner's environment allowlist (which
+is security-relevant and was minimised in M0), the evaluation used a local shim
+named `claude` on `PATH` that selects that config directory and execs the real
+binary. Nothing about this ships: production invokes `claude` directly with the
+machine's default subscription, exactly as the README describes.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:

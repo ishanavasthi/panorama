@@ -43,8 +43,59 @@ Both commands are read-only: they never request, read, or configure an
 Anthropic API key. See `docs/m0-claude-boundary.md` for what the `claude`
 invocation looks like and what was verified about it.
 
+## Trying it on the local fixtures
+
+Panorama ships a mock four-repository organisation so the core review works
+with no GitHub access and no cloning. Build it, then review one of the seeded
+pull requests:
+
+```bash
+uv run panorama fixtures bootstrap
+uv run panorama review --local acme-api --head p1-rename        # Markdown
+uv run panorama review --local acme-api --head p1-rename --json # machine-readable
+```
+
+Each review runs the full pipeline: intake → workspace → deterministic
+retrieval → Claude review → host evidence validation → reference-only report.
+Every finding cites `repo/path:line`; findings whose evidence the host cannot
+verify on disk are discarded and counted, never silently softened.
+
+The four seeded pull requests are:
+
+| Branch | Repo | Seeded defect |
+|---|---|---|
+| `p1-rename` | acme-api | renames a response field a sibling client consumes |
+| `p2-local-validator` | acme-web | reimplements a helper that already exists in a shared repo |
+| `p3-endpoint-conventions` | acme-api | ignores org error-envelope and timestamp conventions |
+| `p4-docs-cleanup` | acme-api | docs-only control that should raise nothing cross-repo |
+
+## Evaluation
+
+The fixtures were reviewed against a real Claude Code subscription, twice each,
+to record category- and evidence-level outcomes. (Exact model wording is not
+recorded — it varies between runs; the *categories and cited repositories* are
+what matter.)
+
+| PR | Expected | Result (both passes) |
+|---|---|---|
+| P1 | contract break vs the consumer | `contract_break`, high, citing **acme-web** |
+| P2 | duplicate of a shared helper | `duplicate_logic`, medium, citing **acme-shared** |
+| P3 | convention violation | `convention` (×2), citing **acme-contracts** |
+| P4 | no cross-repo impact | no findings; verdict `comment` |
+
+Across both passes: **zero findings were discarded** (every citation the model
+produced resolved to a real, in-bounds line), and the P4 control produced no
+finding either time — no fabricated cross-repository impact. The only run-to-run
+variance observed was on P3, where one pass additionally surfaced a low-severity
+`duplicate_logic` finding (also correctly cited); the core convention findings
+were stable. No prompt or retrieval tuning was required.
+
 ## Status
 
-Early build. `panorama doctor` is implemented; `review`, `fixtures` and
-`demo` are not yet wired up. See `v1plan.md` for the build order and
-`DECISIONS.md` for the reasoning behind the major choices.
+Working local-first V1. Implemented: `panorama doctor`, `panorama fixtures
+bootstrap`, and `panorama review --local` end to end (retrieval, Claude review,
+host validation, reference-only rendering, `--json`). Not yet wired up: GitHub
+PR intake, multi-repo cloning, `--post`, and `demo --github` — these widen the
+input surface from local fixtures to live GitHub and are the next milestones.
+See `v1plan.md` for the build order and `DECISIONS.md` for the reasoning behind
+the major choices.

@@ -150,7 +150,7 @@ any GitHub code exists. Full exit criteria live in `v1plan.md`.
 - [x] **S4** — deterministic retrieval: diff signals, stopwords, sibling
       `git grep`, hit windows, convention-doc discovery
 - [x] **S5** — Claude review + evidence validator + reference-only renderer
-- [ ] **S6** — real evaluation on P1–P4, at most two tunings ← **cut line:
+- [x] **S6** — real evaluation on P1–P4, at most two tunings ← **cut line:
       the project is complete and demonstrable here**
 - [ ] **S7** — GitHub PR intake via `gh` (second source, same pipeline)
 - [ ] **S8** — real multi-repo workspace: org listing, clone/fetch/checkout
