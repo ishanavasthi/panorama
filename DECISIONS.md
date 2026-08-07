@@ -231,6 +231,33 @@ shape, so retrieval, review, and delivery never learn where a PR came from.
   "don't dump repository source to stdout" discipline even for our own
   fixtures; `--json` is the explicit way to get the full bundle.
 
+## S3 — the workspace view
+
+### What S3 shipped
+
+A read-only `Workspace` over the bootstrapped fixture directory: it enumerates
+the four repositories at their immutable HEAD SHAs, resolves a `repo/path`
+reference while proving it stays inside its repository, and generates an *org
+map* — a compact orientation document listing each repo's description, README
+summary, top-level paths, and any organisation convention documents.
+
+### Decisions worth recording
+
+- **The org map is derived entirely from generic content patterns**, never from
+  fixture knowledge. Descriptions come from a `package.json`, summaries from the
+  README's first paragraph, and convention documents from generic engineering
+  names (`CONVENTIONS.md`, `ARCHITECTURE.md`, `docs/standards/**`, `openapi/**`,
+  …). The code contains no repo, field, or document names — a test enforces
+  that — so it will work unchanged on a real organisation.
+- **Containment is the foundation the evidence validator will stand on.**
+  `resolve_within` follows symlinks and normalizes `..` *before* testing that a
+  path is inside its repository, so a reference can never escape via traversal
+  or a symlink. It deliberately does not assert the file exists — that is a
+  separate check the S5 validator layers on top.
+- **A repository with no convention documents surfaces none** rather than
+  guessing, and summaries are length-capped, so the org map stays honest and
+  bounded regardless of repository size.
+
 ---
 
 ## Standing limitations of V1
