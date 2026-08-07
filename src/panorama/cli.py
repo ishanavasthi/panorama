@@ -21,6 +21,7 @@ from panorama.intake import (
     parse_pr_ref,
     resolve_local_repo,
 )
+from panorama.provision import WorkspaceProvisioner
 from panorama.render import render_markdown, review_json_obj
 from panorama.retrieval import retrieve
 from panorama.review import run_review
@@ -160,6 +161,24 @@ def review(
         _review_github(target, json_output=json_output)
 
 
+def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
+    """Retrieval → review → host validation over a ready workspace."""
+    retrieval = retrieve(pull_request, workspace)
+    result = run_review(pull_request, workspace, retrieval, runner=runner)
+    validated = validate_review(result.data, pull_request, workspace)
+    return validated, retrieval.truncated
+
+
+def _emit(pull_request, validated, truncated: bool, *, json_output: bool) -> None:
+    if json_output:
+        import json
+
+        obj = review_json_obj(pull_request, validated, retrieval_truncated=truncated)
+        typer.echo(json.dumps(obj, indent=2))
+    else:
+        typer.echo(render_markdown(pull_request, validated, retrieval_truncated=truncated))
+
+
 def _review_local(local: str, base: str, head: str, *, json_output: bool) -> None:
     """Full pipeline over a local fixture repository."""
     try:
@@ -168,61 +187,37 @@ def _review_local(local: str, base: str, head: str, *, json_output: bool) -> Non
         # The workspace is the organisation directory the repo lives in, so one
         # search spans every sibling. Grant exactly that root to the child.
         workspace = Workspace(repo_path.resolve().parent)
-        retrieval = retrieve(pull_request, workspace)
         runner = ClaudeRunner(allowed_workspace_roots=[workspace.root])
-        result = run_review(pull_request, workspace, retrieval, runner=runner)
-        validated = validate_review(result.data, pull_request, workspace)
+        validated, truncated = _run_pipeline(pull_request, workspace, runner)
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
-    if json_output:
-        import json
-
-        obj = review_json_obj(pull_request, validated, retrieval_truncated=retrieval.truncated)
-        typer.echo(json.dumps(obj, indent=2))
-    else:
-        typer.echo(
-            render_markdown(pull_request, validated, retrieval_truncated=retrieval.truncated)
-        )
+    _emit(pull_request, validated, truncated, json_output=json_output)
 
 
 def _review_github(target: str, *, json_output: bool) -> None:
-    """GitHub PR intake (S7).
+    """Full pipeline over a GitHub pull request.
 
-    Normalizes the pull request into the same shape the local source produces.
-    Cross-repository review needs the sibling repositories cloned into a
-    workspace, which lands in S8 — until then this reports the normalized pull
-    request and stops before retrieval rather than pretending to review.
+    Intake normalizes the PR (S7); the provisioner clones the organisation's
+    repositories into a locked workspace and checks the PR repo out at its head
+    SHA (S8). The workspace then flows through the identical retrieval → review
+    → validation → rendering path the local source uses. The clone workspace
+    lives under ``~/.panorama/workspaces``, which is the runner's default
+    allowed root, so no extra grant is needed.
     """
     try:
         owner, repo, number = parse_pr_ref(target)
         pull_request = GitHubPullRequestSource(owner, repo, number).load()
+        with WorkspaceProvisioner(owner) as provisioner:
+            workspace = provisioner.provision(pull_request)
+            runner = ClaudeRunner()
+            validated, truncated = _run_pipeline(pull_request, workspace, runner)
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
-    if json_output:
-        typer.echo(pull_request.model_dump_json(indent=2))
-        return
-
-    pr = pull_request
-    files_changed = sum(1 for line in pr.diff.splitlines() if line.startswith("diff --git"))
-    typer.echo(
-        "\n".join(
-            [
-                f"GitHub pull request {pr.owner}/{pr.repo}#{pr.number}",
-                f"  title: {pr.title}",
-                f"  base:  {pr.base_ref} ({pr.base_sha[:12]})",
-                f"  head:  {pr.head_ref} ({pr.head_sha[:12]})",
-                f"  diff:  {files_changed} file(s) changed",
-                "",
-                "Intake succeeded. Cross-repository review runs once the sibling "
-                "repositories are cloned into a workspace (S8); use --json to see "
-                "the normalized pull request.",
-            ]
-        )
-    )
+    _emit(pull_request, validated, truncated, json_output=json_output)
 
 
 # --- Extension point -------------------------------------------------------

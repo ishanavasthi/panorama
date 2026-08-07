@@ -21,6 +21,7 @@ from pathlib import Path
 
 import pytest
 
+from panorama.cli import app
 from panorama.errors import IntakeError, PreflightError
 from panorama.intake import GitHubPullRequestSource, PullRequest, parse_pr_ref
 from tests import fake_gh as gh
@@ -195,56 +196,131 @@ def test_missing_shas_raise_intake_error(fake_gh: FakeGh) -> None:
 
 
 # ---------------------------------------------------------------------------
-# CLI wiring (the fake `gh` on PATH; only `gh` is shadowed)
+# CLI wiring
+#
+# The heavy dependencies (real `gh`, cloning, the model) are tested elsewhere:
+# GitHub intake above, provisioning + the pipeline-over-a-provisioned-workspace
+# in test_provision.py, and the full local pipeline in test_review_pipeline.py.
+# Here we test only the CLI's GitHub *branch*: parse -> intake -> provision ->
+# pipeline -> emit, and that a provisioning failure surfaces with its exit code.
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def cli_gh(fake_gh: FakeGh, monkeypatch: pytest.MonkeyPatch) -> FakeGh:
-    """Prepend the fake-`gh` dir to PATH so `GitHubPullRequestSource` finds it.
-
-    Only `gh` lives in that dir, so real `git`/`claude` stay resolvable behind
-    it — the CLI's GitHub path never invokes them anyway.
-    """
-    import os
-
-    monkeypatch.setenv("PATH", f"{fake_gh.bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
-    return fake_gh
-
-
-def test_cli_github_json_emits_normalized_pull_request(cli_gh: FakeGh) -> None:
+def test_cli_github_branch_renders_a_validated_review(monkeypatch: pytest.MonkeyPatch) -> None:
     import json
 
     from typer.testing import CliRunner
 
-    from panorama.cli import app
+    from panorama import cli
+    from panorama.intake import PullRequest
+    from panorama.models import Evidence, Finding
+    from panorama.validation import ValidatedReview
 
-    cli_gh.set_scenario(gh.scenario(meta=gh.pr_meta(number=42), diff=gh.SAMPLE_DIFF))
-    result = CliRunner().invoke(app, ["review", "acme/acme-api#42", "--json"])
+    pr = PullRequest(
+        owner="acme",
+        repo="acme-api",
+        number=7,
+        url="https://github.com/acme/acme-api/pull/7",
+        base_sha="a" * 40,
+        head_sha="b" * 40,
+        base_ref="main",
+        head_ref="feature",
+        title="t",
+        body="",
+        diff="diff --git a/x b/x\n",
+    )
+    validated = ValidatedReview(
+        verdict="request_changes",
+        summary="A cross-repo break.",
+        findings=[
+            Finding(
+                severity="high",
+                category="contract_break",
+                title="break",
+                rationale="why",
+                evidence=[Evidence(repo="acme-web", path="src/x.ts", line=1)],
+                confidence="high",
+            )
+        ],
+        discarded=[],
+    )
+
+    class _FakeSource:
+        def __init__(self, owner, repo, number, **kw):
+            pass
+
+        def load(self):
+            return pr
+
+    class _FakeProvisioner:
+        def __init__(self, owner, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def provision(self, _pr):
+            return object()  # the workspace is unused: the pipeline is stubbed
+
+    monkeypatch.setattr(cli, "GitHubPullRequestSource", _FakeSource)
+    monkeypatch.setattr(cli, "WorkspaceProvisioner", _FakeProvisioner)
+    monkeypatch.setattr(cli, "ClaudeRunner", lambda *a, **k: object())
+    monkeypatch.setattr(cli, "_run_pipeline", lambda *a, **k: (validated, False))
+
+    result = CliRunner().invoke(app, ["review", "acme/acme-api#7", "--json"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert payload["repo"] == "acme-api"
-    assert payload["number"] == 42
-    assert "target_url" in payload["diff"]
+    assert payload["repo"] == "acme/acme-api"
+    assert payload["findings"][0]["evidence"][0]["repo"] == "acme-web"
 
 
-def test_cli_github_summary_hides_diff_body(cli_gh: FakeGh) -> None:
+def test_cli_github_branch_surfaces_provisioning_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     from typer.testing import CliRunner
 
-    from panorama.cli import app
+    from panorama import cli
+    from panorama.errors import EXIT_VALIDATION_ERROR
+    from panorama.intake import PullRequest
+    from panorama.workspace import WorkspaceError
 
-    cli_gh.set_scenario(gh.scenario(meta=gh.pr_meta(number=42), diff=gh.SAMPLE_DIFF))
-    result = CliRunner().invoke(app, ["review", "acme/acme-api#42"])
-    assert result.exit_code == 0, result.output
-    assert "acme/acme-api#42" in result.output
-    assert "S8" in result.output  # honest about what is not wired up yet
-    assert "diff --git" not in result.output
+    pr = PullRequest(
+        owner="acme", repo="acme-api", number=7, url=None,
+        base_sha="a" * 40, head_sha="b" * 40, base_ref="main", head_ref="f",
+        title="t", body="", diff="",
+    )
+
+    class _FakeSource:
+        def __init__(self, *a, **k):
+            pass
+
+        def load(self):
+            return pr
+
+    class _FailingProvisioner:
+        def __init__(self, *a, **k):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def provision(self, _pr):
+            raise WorkspaceError("the 'acme' organisation has more than 50 repositories")
+
+    monkeypatch.setattr(cli, "GitHubPullRequestSource", _FakeSource)
+    monkeypatch.setattr(cli, "WorkspaceProvisioner", _FailingProvisioner)
+
+    result = CliRunner().invoke(app, ["review", "acme/acme-api#7"])
+    assert result.exit_code == EXIT_VALIDATION_ERROR
+    assert "more than 50" in result.output
 
 
 def test_cli_rejects_both_local_and_github_ref() -> None:
     from typer.testing import CliRunner
-
-    from panorama.cli import app
 
     result = CliRunner().invoke(app, ["review", "acme/acme-api#1", "--local", "acme-api"])
     assert result.exit_code != 0
@@ -252,8 +328,6 @@ def test_cli_rejects_both_local_and_github_ref() -> None:
 
 def test_cli_rejects_no_target() -> None:
     from typer.testing import CliRunner
-
-    from panorama.cli import app
 
     result = CliRunner().invoke(app, ["review"])
     assert result.exit_code != 0
