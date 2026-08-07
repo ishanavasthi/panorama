@@ -1,5 +1,7 @@
-# --- Project documents kept local (not part of the shipped source) ---
-CLAUDE.md
+# --- Project documents kept local ---
+# CLAUDE.md IS tracked: it states the constraints the project is built against,
+# so it ships with the code. These two stay local -- the brief is not ours to
+# publish, and IMPLEMENT.md is superseded on ordering by v1plan.md.
 ASSIGNMENT.md
 IMPLEMENT.md
 
