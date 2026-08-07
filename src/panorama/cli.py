@@ -12,8 +12,13 @@ import typer
 
 from panorama import __version__
 from panorama.claude_runner import ClaudeRunner
+from panorama.delivery import (
+    PRCommentPoster,
+    assert_postable,
+    build_comment_body,
+)
 from panorama.doctor import render_report, run_doctor
-from panorama.errors import PanoramaError
+from panorama.errors import IntakeError, PanoramaError
 from panorama.fixtures import bootstrap as bootstrap_fixtures
 from panorama.intake import (
     GitHubPullRequestSource,
@@ -141,8 +146,13 @@ def review(
         "--json",
         help="Emit the validated review as JSON instead of Markdown.",
     ),
+    post: bool = typer.Option(
+        False,
+        "--post",
+        help="Post the review as a single, idempotent comment on the GitHub PR.",
+    ),
 ) -> None:
-    """Review a pull request end to end. This build wires up `--local` only.
+    """Review a pull request end to end (local fixture or GitHub PR).
 
     Pipeline: intake -> workspace -> deterministic retrieval -> Claude review
     -> host evidence validation -> reference-only rendering. Findings that fail
@@ -156,9 +166,11 @@ def review(
     if local is not None:
         if head is None:
             raise typer.BadParameter("--head is required with --local.")
+        if post:
+            raise typer.BadParameter("--post needs a GitHub PR; it cannot post to a local fixture.")
         _review_local(local, base, head, json_output=json_output)
     else:
-        _review_github(target, json_output=json_output)
+        _review_github(target, json_output=json_output, post=post)
 
 
 def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
@@ -196,7 +208,7 @@ def _review_local(local: str, base: str, head: str, *, json_output: bool) -> Non
     _emit(pull_request, validated, truncated, json_output=json_output)
 
 
-def _review_github(target: str, *, json_output: bool) -> None:
+def _review_github(target: str, *, json_output: bool, post: bool = False) -> None:
     """Full pipeline over a GitHub pull request.
 
     Intake normalizes the PR (S7); the provisioner clones the organisation's
@@ -204,7 +216,8 @@ def _review_github(target: str, *, json_output: bool) -> None:
     SHA (S8). The workspace then flows through the identical retrieval → review
     → validation → rendering path the local source uses. The clone workspace
     lives under ``~/.panorama/workspaces``, which is the runner's default
-    allowed root, so no extra grant is needed.
+    allowed root, so no extra grant is needed. With ``--post`` the review is
+    delivered as one idempotent PR comment (S9).
     """
     try:
         owner, repo, number = parse_pr_ref(target)
@@ -213,11 +226,39 @@ def _review_github(target: str, *, json_output: bool) -> None:
             workspace = provisioner.provision(pull_request)
             runner = ClaudeRunner()
             validated, truncated = _run_pipeline(pull_request, workspace, runner)
+
+        _emit(pull_request, validated, truncated, json_output=json_output)
+
+        if post:
+            _post_review(owner, repo, number, pull_request, validated, truncated)
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
-    _emit(pull_request, validated, truncated, json_output=json_output)
+
+def _post_review(owner, repo, number, pull_request, validated, truncated: bool) -> None:
+    """Deliver the review as one idempotent PR comment, guarded against staleness.
+
+    The head SHA is re-read immediately before posting and the post is aborted if
+    the branch moved, and the assembled body passes a final secret screen so a
+    review pinned to a superseded commit — or carrying a leaked credential —
+    never reaches the thread.
+    """
+    poster = PRCommentPoster(owner, repo, number)
+
+    current_head = poster.current_head_sha()
+    if current_head != pull_request.head_sha:
+        raise IntakeError(
+            f"the pull request moved since it was reviewed "
+            f"(reviewed {pull_request.head_sha[:12]}, now {current_head[:12]}). "
+            "Nothing was posted; re-run the review."
+        )
+
+    markdown = render_markdown(pull_request, validated, retrieval_truncated=truncated)
+    body = build_comment_body(markdown)
+    assert_postable(body)
+    action = poster.upsert(body)
+    typer.echo(f"Posted review comment ({action}) on {owner}/{repo}#{number}.")
 
 
 # --- Extension point -------------------------------------------------------

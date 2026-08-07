@@ -54,6 +54,31 @@ def main() -> int:
         return 0
 
     scenario = load()
+
+    # Comment endpoints (issues/<n>/comments, issues/comments/<id>): list, or
+    # create/update driven by the request method.
+    joined = " ".join(argv)
+    if "issues" in joined and "comments" in joined:
+        rc = int(scenario.get("comments_rc", 0))
+        if rc != 0:
+            sys.stderr.write(scenario.get("stderr", "fake gh: forced failure\n"))
+            return rc
+        method = "POST" if "POST" in argv else ("PATCH" if "PATCH" in argv else "GET")
+        if method in ("POST", "PATCH"):
+            raw_body = sys.stdin.read()
+            path = next((a for a in argv if a.startswith("repos/")), "")
+            (HERE / "posted.json").write_text(
+                json.dumps({"method": method, "path": path, "input": raw_body})
+            )
+            try:
+                parsed = json.loads(raw_body)
+            except ValueError:
+                parsed = {}
+            sys.stdout.write(json.dumps({"id": 999, "body": parsed.get("body", "")}))
+            return 0
+        sys.stdout.write(json.dumps(scenario.get("comments", [])))
+        return 0
+
     is_diff = any("vnd.github.diff" in arg for arg in argv)
 
     rc_key = "diff_rc" if is_diff else "meta_rc"
