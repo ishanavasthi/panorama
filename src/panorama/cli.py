@@ -13,9 +13,14 @@ import typer
 from panorama import __version__
 from panorama.claude_runner import ClaudeRunner
 from panorama.doctor import render_report, run_doctor
-from panorama.errors import EXIT_GENERAL_ERROR, PanoramaError
+from panorama.errors import PanoramaError
 from panorama.fixtures import bootstrap as bootstrap_fixtures
-from panorama.intake import LocalPullRequestSource, resolve_local_repo
+from panorama.intake import (
+    GitHubPullRequestSource,
+    LocalPullRequestSource,
+    parse_pr_ref,
+    resolve_local_repo,
+)
 from panorama.render import render_markdown, review_json_obj
 from panorama.retrieval import retrieve
 from panorama.review import run_review
@@ -144,17 +149,19 @@ def review(
     """
     if local is not None and target is not None:
         raise typer.BadParameter("pass either --local or a GitHub PR reference, not both.")
-    if local is None:
-        # GitHub intake is a below-the-cut-line milestone; fail honestly.
-        typer.echo(
-            "error: GitHub PR intake is not implemented yet; "
-            "use --local <repo> --head <branch>.",
-            err=True,
-        )
-        raise typer.Exit(EXIT_GENERAL_ERROR)
-    if head is None:
-        raise typer.BadParameter("--head is required with --local.")
+    if local is None and target is None:
+        raise typer.BadParameter("pass a GitHub PR reference (owner/repo#n) or --local <repo>.")
 
+    if local is not None:
+        if head is None:
+            raise typer.BadParameter("--head is required with --local.")
+        _review_local(local, base, head, json_output=json_output)
+    else:
+        _review_github(target, json_output=json_output)
+
+
+def _review_local(local: str, base: str, head: str, *, json_output: bool) -> None:
+    """Full pipeline over a local fixture repository."""
     try:
         repo_path = resolve_local_repo(local)
         pull_request = LocalPullRequestSource(repo_path, base, head).load()
@@ -172,16 +179,50 @@ def review(
     if json_output:
         import json
 
-        obj = review_json_obj(
-            pull_request, validated, retrieval_truncated=retrieval.truncated
-        )
+        obj = review_json_obj(pull_request, validated, retrieval_truncated=retrieval.truncated)
         typer.echo(json.dumps(obj, indent=2))
     else:
         typer.echo(
-            render_markdown(
-                pull_request, validated, retrieval_truncated=retrieval.truncated
-            )
+            render_markdown(pull_request, validated, retrieval_truncated=retrieval.truncated)
         )
+
+
+def _review_github(target: str, *, json_output: bool) -> None:
+    """GitHub PR intake (S7).
+
+    Normalizes the pull request into the same shape the local source produces.
+    Cross-repository review needs the sibling repositories cloned into a
+    workspace, which lands in S8 — until then this reports the normalized pull
+    request and stops before retrieval rather than pretending to review.
+    """
+    try:
+        owner, repo, number = parse_pr_ref(target)
+        pull_request = GitHubPullRequestSource(owner, repo, number).load()
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    if json_output:
+        typer.echo(pull_request.model_dump_json(indent=2))
+        return
+
+    pr = pull_request
+    files_changed = sum(1 for line in pr.diff.splitlines() if line.startswith("diff --git"))
+    typer.echo(
+        "\n".join(
+            [
+                f"GitHub pull request {pr.owner}/{pr.repo}#{pr.number}",
+                f"  title: {pr.title}",
+                f"  base:  {pr.base_ref} ({pr.base_sha[:12]})",
+                f"  head:  {pr.head_ref} ({pr.head_sha[:12]})",
+                f"  diff:  {files_changed} file(s) changed",
+                "",
+                "Intake succeeded. Cross-repository review runs once the sibling "
+                "repositories are cloned into a workspace (S8); use --json to see "
+                "the normalized pull request.",
+            ]
+        )
+    )
 
 
 # --- Extension point -------------------------------------------------------

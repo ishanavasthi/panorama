@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""A fake `gh` CLI for Panorama's offline GitHub-intake tests.
+
+It answers exactly the two REST reads `GitHubPullRequestSource` makes — the
+pull-request object as JSON, and the same object as a unified diff — from a
+sidecar `gh_scenario.json` written next to this script by the test. Nothing here
+touches the network, a real GitHub token, or `gh`'s config.
+
+Sidecar shape (every key optional; sensible defaults supplied):
+
+    {
+      "meta":        { ... REST pull-request object ... },
+      "diff":        "diff --git ...",
+      "meta_rc":     0,        # non-zero -> the metadata call fails
+      "diff_rc":     0,        # non-zero -> the diff call fails
+      "meta_stdout": "...",    # override raw stdout (e.g. to emit non-JSON)
+      "stderr":      "..."     # written to stderr on a forced failure
+    }
+
+The metadata vs diff call is told apart by the `Accept: ...diff` header the
+source passes only for the diff.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+SIDECAR = HERE / "gh_scenario.json"
+
+_DEFAULT_META = {
+    "number": 1,
+    "title": "Default fake PR",
+    "body": "Default body.",
+    "html_url": "https://github.com/acme/acme-api/pull/1",
+    "base": {"ref": "main", "sha": "a" * 40},
+    "head": {"ref": "feature", "sha": "b" * 40, "repo": {"full_name": "acme/acme-api"}},
+}
+
+
+def load() -> dict:
+    if SIDECAR.is_file():
+        return json.loads(SIDECAR.read_text())
+    return {}
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+
+    if "--version" in argv:
+        sys.stdout.write("gh version 2.96.0 (2026-01-01)\n")
+        return 0
+
+    scenario = load()
+    is_diff = any("vnd.github.diff" in arg for arg in argv)
+
+    rc_key = "diff_rc" if is_diff else "meta_rc"
+    rc = int(scenario.get(rc_key, 0))
+    if rc != 0:
+        sys.stderr.write(scenario.get("stderr", "fake gh: forced failure\n"))
+        return rc
+
+    if is_diff:
+        sys.stdout.write(scenario.get("diff", "diff --git a/x b/x\n"))
+        return 0
+
+    if "meta_stdout" in scenario:
+        sys.stdout.write(scenario["meta_stdout"])
+        return 0
+    sys.stdout.write(json.dumps(scenario.get("meta", _DEFAULT_META)))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

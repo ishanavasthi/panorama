@@ -234,7 +234,10 @@ def test_review_requires_head(demo_org: Path) -> None:
     assert result.exit_code != 0
 
 
-def test_review_github_intake_not_implemented() -> None:
-    result = CliRunner().invoke(app, ["review", "acme/acme-api#1"])
+def test_review_malformed_github_ref_is_rejected_offline() -> None:
+    # A ref that cannot be parsed fails before `gh` is ever invoked, so this
+    # needs no network and no fake gh. (Well-formed GitHub intake is covered in
+    # test_github_intake.py.)
+    result = CliRunner().invoke(app, ["review", "definitely-not-a-pr-ref"])
     assert result.exit_code != 0
-    assert "not implemented" in result.output.lower()
+    assert "parse" in result.output.lower()
