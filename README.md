@@ -98,6 +98,7 @@ and signed in — `gh auth login`):
 ```bash
 uv run panorama review owner/repo#123          # or a full PR URL
 uv run panorama review owner/repo#123 --json
+uv run panorama review owner/repo#123 --post   # also post the review as a comment
 ```
 
 This runs the same pipeline as a local review. Panorama normalizes the PR (a
@@ -106,17 +107,23 @@ workspace under `~/.panorama/workspaces/<owner>/` (`0700`, locked so two runs
 never collide), checks the PR's own repository out at the exact reviewed commit,
 and then retrieves, reviews, validates, and renders exactly as it does locally.
 
+With `--post`, Panorama publishes the review as a **single** comment tagged with
+a hidden marker: run it again and that comment is *updated*, not duplicated. It
+re-reads the head SHA immediately before posting and aborts if the branch moved,
+and screens the outgoing body for secrets one last time. Posting needs write
+access (`--post` only); a read-only token still reviews fine.
+
 Two boundaries worth knowing: Panorama never reads, stores, or prints a GitHub
 token — `gh` owns that credential — and organisations larger than 50
 repositories are out of scope (it fails before cloning rather than degrading).
 
 ## Status
 
-Working V1 through live GitHub review. Implemented: `panorama doctor`,
-`panorama fixtures bootstrap`, and `panorama review` end to end for both a local
-fixture (`--local`) and a GitHub PR (`owner/repo#n` or URL) — intake → workspace
-(cloned for GitHub) → retrieval → Claude review → host validation →
-reference-only rendering, with `--json`. Not yet wired up: idempotent `--post`
-of a review comment, and `demo --github` seeding of the private mock org. See
-`v1plan.md` for the build order and `DECISIONS.md` for the reasoning behind the
-major choices.
+Working V1 through live GitHub review and delivery. Implemented: `panorama
+doctor`, `panorama fixtures bootstrap`, and `panorama review` end to end for both
+a local fixture (`--local`) and a GitHub PR (`owner/repo#n` or URL) — intake →
+workspace (cloned for GitHub) → retrieval → Claude review → host validation →
+reference-only rendering, with `--json` and an idempotent `--post`. Not yet
+wired up: `demo --github` seeding of the private mock org (for a fully
+self-contained live demo). See `v1plan.md` for the build order and
+`DECISIONS.md` for the reasoning behind the major choices.

@@ -154,7 +154,7 @@ any GitHub code exists. Full exit criteria live in `v1plan.md`.
       the project is complete and demonstrable here**
 - [x] **S7** — GitHub PR intake via `gh` (second source, same pipeline)
 - [x] **S8** — real multi-repo workspace: org listing, clone/fetch/checkout
-- [ ] **S9** — delivery: `--json`, idempotent `--post`, exit codes, screening
+- [x] **S9** — delivery: `--json`, idempotent `--post`, exit codes, screening
 - [ ] **S10** — live private demo seeding and hardening
 - [ ] **S11** — README, decision record, limitations, AI-use note, Loom
 

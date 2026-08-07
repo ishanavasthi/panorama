@@ -507,6 +507,45 @@ deliberately simpler than partial or shallow clones.
 
 ---
 
+## S9 — delivery: the idempotent PR comment
+
+### What S9 shipped
+
+The `--post` half of delivery: turning a rendered review into exactly one comment
+on the pull request. `--json` and Markdown to stdout already existed; this adds
+posting, and makes it safe to run more than once.
+
+### Decisions worth recording
+
+- **Panorama owns exactly one comment, found by a hidden marker.** The comment
+  body carries an invisible `<!-- panorama:v1 -->` tag. A later run lists the PR's
+  comments, finds the tagged one, and *updates* it in place rather than adding a
+  new one — so re-reviewing a pull request refreshes the verdict instead of
+  littering the thread. First run creates, every run after updates.
+- **The head SHA is re-read immediately before posting, and a moved PR aborts the
+  post.** A review is pinned to the commit it was run against; if the branch
+  advanced between reviewing and posting, publishing that review would attach
+  stale conclusions to a commit that no longer exists at the head. Better to
+  refuse and ask for a re-run than to post something misleading.
+- **A final secret screen guards the outgoing body.** The validator already
+  screens every finding and the summary; the fully assembled comment is screened
+  once more before it leaves the machine. Posting is the one irreversible,
+  outward-facing step, so it gets the last word.
+- **The body is sent as JSON on stdin, not on the command line.** `gh api --input
+  -` carries the comment body, so arbitrary review text can never overflow an
+  argument limit or be mis-split by the shell — and, as everywhere, `gh` owns the
+  credential and its raw stderr is never echoed.
+
+### A limitation this leaves
+
+The marked-comment lookup reads a single page of the most recent comments, which
+is ample for a demo-scale thread but would miss Panorama's own comment on a pull
+request buried under hundreds of newer ones. Posting also needs write access to
+the repository, which `gh` supplies; a read-only token reviews fine but cannot
+`--post`.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:
