@@ -546,6 +546,55 @@ the repository, which `gh` supplies; a read-only token reviews fine but cannot
 
 ---
 
+## S10 — live demo seeding and hardening
+
+### What S10 shipped
+
+`panorama demo --github <owner>` — the one command that *writes* to GitHub. It
+turns the checked-in fixtures into real **private** repositories under an owner,
+pushes the seeded branches, and opens a pull request for each, so the whole
+cross-repository review can be shown live rather than only on local fixtures.
+Alongside it, the pipeline was hardened for the messy diffs a real PR brings.
+
+### Decisions worth recording
+
+- **The one write path is confirmed, credential-clean, and never tested live.**
+  Seeding refuses to create anything without an explicit yes (`--yes` for
+  non-interactive use), every write goes through `gh` (which owns the token), and
+  the orchestration is exercised offline with an injected command runner — no
+  automated test ever touches real GitHub.
+- **The plan is derived from the fixtures, and reuses the same seeding as local
+  review.** Repository names, branches, and PR titles all come from the data
+  tree, and the command builds the local repositories with the very same
+  `bootstrap` the offline evaluation uses before pushing them. So what is
+  demonstrated live is exactly what was evaluated locally — the same seeded
+  defects, not a re-implementation.
+- **Clean-state by default.** Seeding refuses to scribble over a repository that
+  already exists; `--recreate` (which needs the `delete_repo` scope) is the
+  explicit opt-in to replace one, so a demo always starts from a known state.
+- **Generated and binary noise is kept out of the model's view.** A pull request
+  that also regenerates a lockfile or a minified bundle carries huge, low-signal
+  hunks. Those whole file sections are stripped from the diff the model reads
+  (and the omission is stated), while host validation still runs against the
+  *full* diff. An oversized diff beyond a fixed character cap is truncated with a
+  marker, and the report says the context was truncated.
+- **Stale and force-pushed pull requests were already handled — S10 just leans on
+  it.** The provisioner refuses to review a head commit that is no longer
+  reachable (a deleted or force-pushed branch), and `--post` re-reads the head
+  SHA and aborts if the branch moved. Missing `gh` auth fails with an actionable
+  message at every entry point. The hardening milestone confirmed these paths
+  rather than inventing new ones.
+
+### A limitation this leaves
+
+Live seeding needs repository-creation scope (and `delete_repo` for
+`--recreate`) on the authenticated `gh` account, and it seeds one owner at a
+time. It is a demo aid, not a fixture-publishing system — the fixtures remain
+plain checked-in data, and the public/private repositories it creates are
+disposable.
+
+---
+
 ## Standing limitations of V1
 
 Known and accepted, so they can be stated plainly rather than discovered:

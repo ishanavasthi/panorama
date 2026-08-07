@@ -117,13 +117,31 @@ Two boundaries worth knowing: Panorama never reads, stores, or prints a GitHub
 token — `gh` owns that credential — and organisations larger than 50
 repositories are out of scope (it fails before cloning rather than degrading).
 
+## Seeding a live demo
+
+To show the whole thing end to end on real GitHub, seed the mock organisation as
+private repositories in an account you control:
+
+```bash
+uv run panorama demo --github <your-user-or-org>
+```
+
+This **creates private repositories** (`acme-api`, `acme-web`, `acme-shared`,
+`acme-contracts`) and opens a pull request for each seeded change — the same
+P1–P4 defects the offline evaluation uses. It always confirms before writing
+(pass `--yes` to skip the prompt, `--recreate` to replace existing repos). Then
+review a seeded PR live, optionally posting the result back:
+
+```bash
+uv run panorama review <your-user-or-org>/acme-api#1 --post
+```
+
 ## Status
 
-Working V1 through live GitHub review and delivery. Implemented: `panorama
-doctor`, `panorama fixtures bootstrap`, and `panorama review` end to end for both
-a local fixture (`--local`) and a GitHub PR (`owner/repo#n` or URL) — intake →
-workspace (cloned for GitHub) → retrieval → Claude review → host validation →
-reference-only rendering, with `--json` and an idempotent `--post`. Not yet
-wired up: `demo --github` seeding of the private mock org (for a fully
-self-contained live demo). See `v1plan.md` for the build order and
-`DECISIONS.md` for the reasoning behind the major choices.
+Feature-complete V1. Implemented: `panorama doctor`, `panorama fixtures
+bootstrap`, `panorama review` end to end for a local fixture (`--local`) and a
+GitHub PR (`owner/repo#n` or URL) — with `--json` and an idempotent `--post` —
+and `panorama demo --github` to seed a live private demo. The remaining work is
+handoff: this README's final polish, the decision record, and a walkthrough
+recording. See `v1plan.md` for the build order and `DECISIONS.md` for the
+reasoning behind the major choices.
