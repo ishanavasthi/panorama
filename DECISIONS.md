@@ -1727,3 +1727,86 @@ They shipped. Inline comments are a presentation improvement whose exit
 criterion is a live two-run check, and that check cannot be performed without a
 seeded organisation. Building it unverified in order to tick a box would have
 been the worse choice.
+
+## V2.11 — making the state visible
+
+### Why `status` is a safety feature, not a convenience
+
+V2 added persistent state, and two kinds of it are unusual: watch cursors drive
+a process that runs without anybody watching, and suppressions are derived from
+**untrusted input** — a pull request thread that anyone with comment access can
+write to.
+
+State nobody can see is state nobody can reason about. `panorama status` exists
+so a person can answer "what has this thing been doing, and what is it currently
+refusing to tell me", and `suppressions list` so they can see specifically what
+was silenced and undo it. Being able to inspect state derived from untrusted
+input is part of the argument that reading it is safe at all.
+
+### Two kinds of cache, two kinds of clear
+
+The cache holds derived facts — a symbol index, dependency edges — which are
+always safe to drop because the next run rebuilds them. It also holds watch
+cursors and dismissals, which are *not* derived: dropping those means
+re-reviewing pull requests that were already handled, and seeing findings a
+human explicitly dismissed.
+
+So `cache clear` drops the derived half, and `--everything` is required for the
+rest. One detail that took a moment to get right: clearing watch state clears
+the review log too, because otherwise a forgotten cursor would be re-reviewed
+against an hourly budget already spent on the very review being forgotten.
+
+### `--fail-on` needed a code of its own
+
+Exit 5, distinct from every error code. Reusing the validation-error code would
+have left a CI job unable to distinguish **"the tool broke"** from **"the tool
+worked and you should look at what it found"** — and a job that cannot tell
+those apart is a job that eventually gets configured to ignore both.
+
+Suppression runs before this check, so a dismissed finding stops failing
+somebody's build, which is most of the point of dismissing it.
+
+### The limitations list is the real deliverable
+
+V1's limitations section said things like "lexical retrieval misses semantic
+links" — true, general, and unfalsifiable. V2's says which two cases rank
+second, exactly why, and that no available tuning fixes it; that cross-language
+duplicate detection barely works and is winnable only on a shared constant name;
+that flake is 22%; that category accuracy is 0.718 and its misses are mostly
+defensible disagreements.
+
+That difference is what the measurement work actually bought. A limitation you
+can name, quantify and point at a test for is a design constraint. A limitation
+you can only gesture at is an excuse.
+
+### The fresh-clone walkthrough earned its exit criterion
+
+The milestone's exit condition was "a fresh clone can install, bootstrap, eval
+and review using only the README". Running it found a bug that nothing else
+could have.
+
+On a clean checkout, the fixture bootstrap **aborted partway through**. It left
+a corpus missing several branches, and the evaluation then reported two
+confident regressions that were entirely artefacts of the broken corpus.
+
+The cause is worth knowing about generally. Git decides whether a file has
+changed from a stat cache — size plus modification time — before it will read
+the contents. The fixture bootstrap copied overlay files with `shutil.copy2`,
+which preserves the source's mtime. A fresh `git clone` writes every file with
+essentially the same timestamp. So an overlay file that was **the same length**
+as the base file it replaced looked untouched: `git add -A` staged nothing, the
+commit failed as empty, and the whole bootstrap stopped.
+
+A one-character version bump inside a manifest is exactly a same-length edit,
+and that is the fixture that tripped it — the dependency-bump negative control
+added back in V2.2. In the working repository the files had different mtimes, so
+it never appeared, through eight milestones and eight hundred passing tests.
+
+Two things follow. Copying content without the timestamp costs nothing and
+removes the entire class of problem. And the regression test reproduces the
+*condition* rather than the symptom: identical size, identical mtime, different
+contents — because the next instance of this will not be a version bump.
+
+It is also the clearest argument for that exit criterion existing at all. A test
+suite proves the code does what the tests say. Only running the documented
+walkthrough on a clean machine proves the documentation is true.

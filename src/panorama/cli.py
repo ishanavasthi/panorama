@@ -22,7 +22,12 @@ from panorama.delivery import (
 )
 from panorama.demo import DemoSeeder, demo_repo_names
 from panorama.doctor import render_report, run_doctor
-from panorama.errors import EXIT_VALIDATION_ERROR, IntakeError, PanoramaError
+from panorama.errors import (
+    EXIT_FINDINGS_AT_THRESHOLD,
+    EXIT_VALIDATION_ERROR,
+    IntakeError,
+    PanoramaError,
+)
 from panorama.evaluation import (
     aggregate_retrieval,
     aggregate_review,
@@ -193,6 +198,14 @@ def review(
         min=1,
         help="How many repositories to clone when selecting (default 15).",
     ),
+    fail_on: str | None = typer.Option(
+        None,
+        "--fail-on",
+        help=(
+            "Exit 5 if any surviving finding is at least this severe "
+            "(high|medium|low). For use as a CI gate."
+        ),
+    ),
 ) -> None:
     """Review a pull request end to end (local fixture or GitHub PR).
 
@@ -210,7 +223,7 @@ def review(
             raise typer.BadParameter("--head is required with --local.")
         if post:
             raise typer.BadParameter("--post needs a GitHub PR; it cannot post to a local fixture.")
-        _review_local(local, base, head, json_output=json_output)
+        _review_local(local, base, head, json_output=json_output, fail_on=fail_on)
     else:
         _review_github(
             target,
@@ -218,6 +231,7 @@ def review(
             post=post,
             all_repos=all_repos,
             clone_budget=clone_budget,
+            fail_on=fail_on,
         )
 
 
@@ -288,7 +302,9 @@ def _emit(
         )
 
 
-def _review_local(local: str, base: str, head: str, *, json_output: bool) -> None:
+def _review_local(
+    local: str, base: str, head: str, *, json_output: bool, fail_on: str | None = None
+) -> None:
     """Full pipeline over a local fixture repository."""
     try:
         repo_path = resolve_local_repo(local)
@@ -303,6 +319,7 @@ def _review_local(local: str, base: str, head: str, *, json_output: bool) -> Non
         raise typer.Exit(exc.exit_code) from exc
 
     _emit(pull_request, validated, truncated, ranked, json_output=json_output)
+    _fail_on_exit(validated, fail_on)
 
 
 def _review_github(
@@ -312,6 +329,7 @@ def _review_github(
     post: bool = False,
     all_repos: bool = False,
     clone_budget: int = DEFAULT_CLONE_BUDGET,
+    fail_on: str | None = None,
 ) -> None:
     """Full pipeline over a GitHub pull request.
 
@@ -347,6 +365,7 @@ def _review_github(
             _post_review(
                 owner, repo, number, pull_request, validated, truncated, ranked
             )
+        _fail_on_exit(validated, fail_on)
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
@@ -744,3 +763,134 @@ def suppressions_clear(
         cache.close()
 
     typer.echo(f"Cleared {removed} suppression(s) for {owner}.")
+
+
+cache_app = typer.Typer(
+    name="cache",
+    help="Inspect and reset the local derived-facts cache.",
+    no_args_is_help=True,
+)
+app.add_typer(cache_app)
+
+
+@cache_app.command("clear")
+def cache_clear(
+    owner: str = typer.Argument(..., help="Owner whose cache to clear."),
+    everything: bool = typer.Option(
+        False,
+        "--everything",
+        help="Also forget watch cursors and dismissals, not just derived facts.",
+    ),
+) -> None:
+    """Empty the cache.
+
+    Safe by construction: everything cleared here is derived from repository
+    content and is rebuilt on the next run. The one exception is guarded behind
+    `--everything`, because watch cursors and dismissals are *not* derived —
+    clearing them means re-reviewing pull requests and seeing dismissed findings
+    again.
+    """
+    try:
+        cache = Cache.for_owner(owner)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    try:
+        before = cache.stats()
+        cache.clear()
+        message = f"Cleared {before.n_facts} cached fact(s) for {owner}."
+        if everything:
+            removed = cache.clear_suppressions()
+            cache.clear_watch_state()
+            message += f" Also forgot {removed} dismissal(s) and every watch cursor."
+        typer.echo(message)
+    finally:
+        cache.close()
+
+
+@app.command()
+def status(
+    owner: str = typer.Argument(..., help="Owner to report on."),
+) -> None:
+    """Show what Panorama is holding locally for this owner.
+
+    Persistent state that nobody can see is state nobody can reason about — and
+    two kinds of it here are read from untrusted input or drive an unattended
+    process, so being able to look at it is part of the safety story rather than
+    a convenience.
+    """
+    try:
+        cache = Cache.for_owner(owner)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    try:
+        stats = cache.stats()
+        cursors = cache.cursors()
+        suppressions = cache.suppressions()
+        recent = cache.reviews_since(24 * 3600)
+    finally:
+        cache.close()
+
+    typer.echo(f"Panorama status for {owner}")
+    typer.echo("")
+    typer.echo(f"  cache file        {stats.path}")
+    typer.echo(f"  cache size        {_human_bytes(stats.size_bytes)}")
+    typer.echo(f"  schema version    {stats.schema_version}")
+    typer.echo(f"  indexed facts     {stats.n_facts} across {len(stats.repos)} repo(s)")
+    typer.echo(f"  watch cursors     {len(cursors)}")
+    typer.echo(f"  reviews (24h)     {recent}")
+    typer.echo(f"  suppressions      {len(suppressions)}")
+
+    if cursors:
+        typer.echo("")
+        typer.echo("  Last reviewed:")
+        for repo, number, head_sha in cursors[:10]:
+            typer.echo(f"    {repo}#{number} at {head_sha[:12]}")
+        if len(cursors) > 10:
+            typer.echo(f"    (+{len(cursors) - 10} more)")
+
+    typer.echo("")
+    typer.echo("  The cache is a derived artifact and is always safe to delete.")
+
+
+#: Severity order, most serious first. `--fail-on medium` means medium or high.
+_SEVERITY_ORDER = ("high", "medium", "low")
+
+
+def _fail_on_exit(validated, fail_on: str | None) -> None:
+    """Exit 5 if anything survived at or above the caller's threshold.
+
+    A distinct code from every error, on purpose: "the tool broke" and "the tool
+    worked and you should look" are different outcomes, and a CI job that cannot
+    tell them apart gets configured to ignore both.
+    """
+    if not fail_on:
+        return
+    threshold = fail_on.strip().lower()
+    if threshold not in _SEVERITY_ORDER:
+        raise typer.BadParameter(
+            f"--fail-on must be one of {', '.join(_SEVERITY_ORDER)}; got {fail_on!r}"
+        )
+    limit = _SEVERITY_ORDER.index(threshold)
+    triggering = [
+        f
+        for f in validated.findings
+        if f.severity in _SEVERITY_ORDER and _SEVERITY_ORDER.index(f.severity) <= limit
+    ]
+    if triggering:
+        noun = "finding" if len(triggering) == 1 else "findings"
+        typer.echo(
+            f"{len(triggering)} {noun} at or above severity {threshold!r}.", err=True
+        )
+        raise typer.Exit(EXIT_FINDINGS_AT_THRESHOLD)
+
+
+def _human_bytes(size: int) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} GB"  # pragma: no cover

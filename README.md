@@ -47,9 +47,9 @@ invocation looks like and what was verified about it.
 
 ## Trying it on the local fixtures
 
-Panorama ships a mock four-repository organisation so the core review works
-with no GitHub access and no cloning. Build it, then review one of the seeded
-pull requests:
+Panorama ships a mock six-repository organisation — TypeScript, Python and Go —
+so the core review works with no GitHub access and no cloning. Build it, then
+review one of the seeded pull requests:
 
 ```bash
 uv run panorama fixtures bootstrap
@@ -188,9 +188,90 @@ re-reads the head SHA immediately before posting and aborts if the branch moved,
 and screens the outgoing body for secrets one last time. Posting needs write
 access (`--post` only); a read-only token still reviews fine.
 
-Two boundaries worth knowing: Panorama never reads, stores, or prints a GitHub
-token — `gh` owns that credential — and organisations larger than 50
-repositories are out of scope (it fails before cloning rather than degrading).
+Panorama never reads, stores, or prints a GitHub token — `gh` owns that
+credential.
+
+**Large organisations.** V1 refused above 50 repositories. V2 reads every
+repository's manifest through the API *without cloning*, ranks candidates, and
+clones only the top few:
+
+```bash
+uv run panorama review owner/repo#123 --clone-budget 25
+uv run panorama review owner/repo#123 --all-repos   # clone everything instead
+```
+
+Every review states how many repositories were considered versus examined,
+because a sibling that is never cloned is never searched and that loss would
+otherwise be invisible.
+
+## Reviewing continuously
+
+`panorama watch` polls an owner's open pull requests and reviews the ones that
+are new or whose head commit moved.
+
+```bash
+uv run panorama watch <owner>                         # dry run: reviews, posts nothing
+uv run panorama watch <owner> --post --repo acme-api  # posts, only to acme-api
+```
+
+It is a poller rather than a webhook for a structural reason: a hosted service
+has no Claude Code subscription, and giving it one would break both "no API key"
+and "credentials stay with the tool that owns them". So reviews lag by the poll
+interval and only run while the process does.
+
+The defaults are deliberately cautious. **`--post` alone is refused** — it needs
+`--repo` naming every repository it may write to. An unmoved head commit is
+never re-reviewed, and the cursor lives on disk so a restart resumes rather than
+re-reviewing everything. Drafts and bot-authored pull requests are skipped
+(`--include-drafts`, `--include-bots`). There is a hard hourly review cap,
+counted on disk so a crash-looping watcher cannot refill its own budget. Logs are
+JSON on stdout; dry-run reviews go to stderr so the event stream stays parseable.
+
+## Not repeating a rejected finding
+
+Every finding carries a short, stable reference. Reply on the pull request to
+stop seeing it:
+
+```
+panorama: dismiss a1b2c3d4e5
+```
+
+A 👎 on Panorama's comment dismisses everything that comment reported.
+Suppressed findings are **counted in the report**, never silently absent.
+
+```bash
+uv run panorama suppressions list <owner>
+uv run panorama suppressions clear <owner>
+```
+
+Dismissals are read from a pull request thread, which is untrusted content, so
+the rule is absolute: **anything read there can only reduce what Panorama says.**
+It can never add a finding, raise a severity, or alter a citation. The blast
+radius of a forged dismissal is one suppressed finding, visible and reversible.
+
+## Operating it
+
+```bash
+uv run panorama status <owner>            # cache size, cursors, suppressions
+uv run panorama cache clear <owner>       # drop derived facts
+uv run panorama cache clear <owner> --everything   # also cursors and dismissals
+```
+
+The cache lives at `~/.panorama/cache/<owner>.db` (`0600`) and holds derived
+facts keyed by repository *and commit*, so a new commit simply misses. It is
+**always safe to delete**: it can only change what gets looked at, never whether
+a citation is real, because every citation is validated against the live
+checkout on every run with no cache in that path.
+
+For CI, `--fail-on` exits **5** when a finding survives at or above a severity:
+
+```bash
+uv run panorama review owner/repo#123 --fail-on high
+```
+
+Exit 5 is deliberately distinct from every error code — "the tool broke" and
+"the tool worked and you should look" are different outcomes, and a job that
+cannot tell them apart ends up ignoring both.
 
 ## Seeding a live demo
 
@@ -279,13 +360,38 @@ The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
 
 ## Known limitations
 
-- **Small organisations only** — up to 50 repositories; it fails before cloning
-  rather than degrading past that.
-- **Lexical retrieval misses purely semantic links** — related code that shares
-  no vocabulary may not be surfaced; the model's own workspace search closes
-  some of that gap.
-- **Model output varies between runs.** Host validation bounds the *correctness*
-  of findings, not their run-to-run *consistency*.
+Measured or accepted, so they can be stated rather than discovered:
+
+- **Two contract-break cases rank their target second, not first.** Their
+  consumers reach the changed service over HTTP, so no manifest and no import
+  statement records the coupling, and both structural channels are silent. Rank
+  fusion is blind to magnitude, so a repository ranked second by two channels
+  edges past a target ranked first by one. Understood, recorded, and not fixable
+  by tuning — see `DECISIONS.md`.
+- **Cross-language duplicate detection barely works.** `format_timestamp` and
+  `formatTimestamp` are different strings and no ranking makes them one. The one
+  case that tests it is winnable only because a shared constant is spelled
+  identically in both languages.
+- **Category accuracy is 0.718**, the weakest live number. Most misses are
+  disagreements about a genuinely fuzzy boundary — a new UTC formatter both
+  duplicates a helper *and* touches the timestamps convention — rather than
+  wrong locations.
+- **Model output varies between runs: 22% flake.** Host validation bounds the
+  *correctness* of findings, not their run-to-run *consistency*. This is why the
+  live evaluation runs every case three times.
+- **Selection can silently drop a relevant repository** on organisations larger
+  than the clone budget, when nothing declares the coupling. Never silent in the
+  report — considered-versus-examined counts are printed every run, and
+  `--all-repos` undoes it.
+- **Symbol extraction is regex, not a parser.** A comment delimiter inside a
+  string literal confuses it and costs some recall. That loss is safe in the
+  direction that matters: a symbol not indexed is a lead not offered, never a
+  citation invented.
+- **A reworded finding title is a new finding**, so a dismissal can need
+  repeating. Deliberate: collapsing similar titles would risk silencing a
+  genuinely new finding, which is the worse failure.
+- **The watcher only runs while your machine does**, and reviews lag by the poll
+  interval. That is a consequence of the subscription constraint, not a gap.
 - **Giving the model read access to private source is an intentional
   trade-off** — mitigated by read-only sandboxing, owner-only `0700` storage,
   prompt-injection treatment, and reference-only output, not eliminated.
@@ -295,11 +401,17 @@ The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
 
 ## Future work
 
-- Configurable repository selection instead of cloning the entire organisation.
-- Stronger semantic retrieval to catch links with no shared vocabulary.
-- A GitHub App / webhook delivery path for automatic PR triggers.
-- Inline line-level review comments in addition to the summary comment.
-- Permission-aware evidence, so a cited location respects who can see which repo.
+- **Read HTTP contracts as a first-class signal.** Route strings and response
+  field names are the coupling both structural channels miss, and they are the
+  remaining headroom in retrieval.
+- **Inline line-level review comments**, deferred because a review with inline
+  comments is not idempotent the way a single edited summary comment is.
+- **Tree-sitter instead of regex**, if measurement ever shows extraction recall
+  is the binding constraint. A measured upgrade, not a speculative one.
+- **Co-change coupling**, built and shipped disabled, waiting on a real
+  organisation with genuine history to measure it against.
+- **Permission-aware evidence**, so a cited location respects who can see which
+  repository.
 
 ## Use of AI tools during development
 
@@ -313,8 +425,27 @@ performs the review.
 
 ## Status
 
-Feature-complete V1. Implemented: `panorama doctor`, `panorama fixtures
-bootstrap`, `panorama review` end to end for a local fixture (`--local`) and a
-GitHub PR (`owner/repo#n` or URL) — with `--json` and an idempotent `--post` —
-and `panorama demo --github` to seed a live private demo. See `v1plan.md` for
-the build order and `DECISIONS.md` for the reasoning behind the major choices.
+**V2, feature-complete.** V1 shipped a working cross-repository reviewer; V2
+made its quality measurable, then measurably better, then able to run
+unattended.
+
+| Command | What it does |
+|---|---|
+| `panorama doctor [--deep]` | Environment and sandbox checks |
+| `panorama fixtures bootstrap` | Build the six-repository mock organisation |
+| `panorama review` | Review a local fixture or a GitHub PR |
+| `panorama eval [--live -k N]` | Score retrieval, and optionally the model |
+| `panorama watch <owner>` | Poll and review continuously, dry-run by default |
+| `panorama status <owner>` | What is held locally: cache, cursors, dismissals |
+| `panorama cache clear <owner>` | Reset derived state |
+| `panorama suppressions list\|clear` | Inspect and undo dismissals |
+| `panorama demo --github <owner>` | Seed a live private demo |
+
+`v2plan.md` has the build order, `CHECKLIST.md` the status of every milestone
+including what was dropped and why, `DECISIONS.md` the reasoning and the
+measurements, `docs/how-it-works.md` the mechanism, and `docs/corpus.md` the
+ground truth quality is measured against.
+
+Not done, and honest about it: the two live `watch` checks need a seeded demo
+organisation, and inline review comments were dropped in favour of the
+fingerprint and suppression work in the same milestone.

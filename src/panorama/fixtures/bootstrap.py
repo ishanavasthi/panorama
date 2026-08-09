@@ -111,14 +111,31 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def _copy_tree(src: Path, dest: Path) -> None:
-    """Copy every file under ``src`` into ``dest``, creating parents as needed."""
+    """Copy every file under ``src`` into ``dest``, creating parents as needed.
+
+    ``shutil.copy`` rather than ``copy2``, deliberately: ``copy2`` preserves the
+    source's modification time, and that silently breaks the bootstrap on a
+    fresh clone.
+
+    Git decides whether a file changed using a stat cache — size plus mtime —
+    before it will look at the contents. A fresh `git clone` writes every file
+    with essentially the same timestamp, so an overlay file that preserves its
+    mtime *and* happens to be the same length as the base file it replaces looks
+    untouched. `git add -A` then stages nothing, the commit fails as empty, and
+    the bootstrap aborts partway through — leaving a corpus that is missing
+    branches and an evaluation that reports confident, wrong regressions.
+
+    That is not hypothetical: a one-character version bump in a manifest is
+    exactly a same-length edit, and it is what caught this. Copying content
+    without the timestamp costs nothing and removes the whole class of problem.
+    """
     for source in sorted(src.rglob("*")):
         if source.is_dir():
             continue
         relative = source.relative_to(src)
         target = dest / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+        shutil.copy(source, target)
 
 
 def _branch_commit_subject(branch_dir: Path, branch_name: str) -> str:

@@ -320,3 +320,45 @@ def test_cli_bootstrap_command(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     for name in EXPECTED_REPOS:
         assert name in result.output
+
+
+def test_a_same_length_overlay_still_commits(tmp_path: Path) -> None:
+    """A fresh clone gives every file the same mtime, which git trusts.
+
+    Git decides whether a file changed from a stat cache — size plus mtime —
+    before it looks at the contents. So an overlay that preserves its source
+    mtime *and* happens to be the same length as the file it replaces reads as
+    untouched: `git add -A` stages nothing, the commit fails as empty, and the
+    bootstrap aborts partway through. What is left is a corpus missing branches
+    and an evaluation reporting confident, wrong regressions.
+
+    A one-character version bump in a manifest is exactly a same-length edit,
+    which is how this was found — by running the fresh-clone walkthrough the
+    README promises.
+    """
+    import os
+
+    data = tmp_path / "data"
+    base = data / "repo" / "base"
+    overlay = data / "repo" / "branches" / "tweak" / "files"
+    base.mkdir(parents=True)
+    overlay.mkdir(parents=True)
+
+    (base / "manifest.json").write_text('{"version": "1.0.0"}\n')
+    (overlay / "manifest.json").write_text('{"version": "1.0.1"}\n')
+
+    # Reproduce the fresh-clone condition exactly: identical size, identical
+    # mtime, different contents.
+    stamp = 1_700_000_000
+    for path in (base / "manifest.json", overlay / "manifest.json"):
+        os.utime(path, (stamp, stamp))
+    assert (base / "manifest.json").stat().st_size == (
+        overlay / "manifest.json"
+    ).stat().st_size
+
+    result = bootstrap(dest_root=tmp_path / "org", data_root=data)
+
+    repo = next(r for r in result.repos if r.name == "repo")
+    assert "tweak" in repo.branches
+    diff = git(repo.path, "diff", "main", "tweak").stdout
+    assert "1.0.1" in diff

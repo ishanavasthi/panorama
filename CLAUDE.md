@@ -144,14 +144,18 @@ panorama fixtures bootstrap              # build local git repos under .panorama
 panorama demo --github <owner>           # explicit, confirmed private live seeding
 
 # V2 — shipped
-panorama eval [--live -k N] [--experimental <channel>]   # score against labelled cases
-
-# V2 — planned, in v2plan.md order
-panorama watch <owner> [--post]          # local polling watcher; dry-run by default
-panorama status                          # cache size, watch cursors, recent runs
-panorama cache clear
-panorama suppressions list | clear
+panorama eval [--live -k N] [--experimental <channel>]   # score labelled cases
+panorama review ... [--all-repos] [--clone-budget N] [--fail-on <severity>]
+panorama watch <owner> [--post --repo R ...]  # polling watcher; dry-run by default
+panorama status <owner>                       # cache, cursors, suppressions
+panorama cache clear <owner> [--everything]
+panorama suppressions list | clear <owner>
 ```
+
+**V2 is feature-complete.** Two things are deliberately not done: inline review
+comments (dropped per the plan's own drop order, in favour of fingerprints and
+suppression in the same milestone) and the two live `watch` checks, which need
+`demo --github` against a real account and so wait for the maintainer.
 
 `doctor` reports actionable setup failures; it must not inspect, request, or
 configure Anthropic API credentials. `demo --github` requires confirmation

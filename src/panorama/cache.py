@@ -483,6 +483,18 @@ class Cache:
 
     # -- operations ---------------------------------------------------------
 
+    def clear_watch_state(self) -> int:
+        """Forget every cursor and the review log.
+
+        Separated from `clear` because this is the one thing here that is *not*
+        derived from repository content: dropping it means re-reviewing pull
+        requests that were already handled.
+        """
+        with self._write() as conn:
+            removed = conn.execute("DELETE FROM watch_cursors").rowcount or 0
+            conn.execute("DELETE FROM watch_reviews")
+            return removed
+
     def clear(self) -> None:
         """Empty the cache without deleting the file. Backs `panorama cache clear`."""
         with self._write() as conn:

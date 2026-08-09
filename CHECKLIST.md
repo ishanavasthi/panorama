@@ -646,19 +646,57 @@ verify them live.
 
 ---
 
-## V2.11 — Operations and documentation
+## V2.11 — Operations and documentation · **DONE**
 
-- [ ] `panorama status` — cache size, watch cursor, suppression count, recent runs
-- [ ] `panorama cache clear`
-- [ ] Structured logging throughout
-- [ ] `--fail-on <severity>` exit codes
-- [ ] `README.md` rewritten for V2
-- [ ] V2 architecture section
-- [ ] `DECISIONS.md` entries for every V2 trade-off
-- [ ] Limitations list updated
-- [ ] Fresh-clone walkthrough verified: install → bootstrap → eval → review → watch
+- [x] `panorama status` — cache size, schema version, indexed facts, watch
+      cursors, reviews in the last day, suppression count
+- [x] `panorama cache clear`, with `--everything` guarding the state that is
+      *not* derived (cursors and dismissals)
+- [x] Structured JSON logging in the watcher, the one unattended path
+- [x] `--fail-on <severity>` exiting **5**, deliberately distinct from every
+      error code
+- [x] `README.md` rewritten for V2: measured quality, watch, suppression,
+      operations, and the full command surface
+- [x] `docs/how-it-works.md` — the mechanism walkthrough, kept current
+      milestone by milestone
+- [x] `DECISIONS.md` entries for every V2 trade-off, including the ones that
+      went badly
+- [x] Limitations list rewritten around what was **measured**, not guessed
+- [x] 18 new tests; full suite green; ruff clean
+- [x] Fresh-clone walkthrough verified: install → bootstrap → eval → review
+      — **and it found a real bug**, see below
 
-**Exit:** the fresh-clone walkthrough works from the README alone.
+**Exit met.**
+
+### Findings from V2.11
+
+- **The limitations list is now measurements, not guesses.** V1's list said
+  "lexical retrieval misses semantic links" as a general worry. V2's says which
+  two cases rank second, why, and that no tuning fixes it. That is the whole
+  difference the measurement work bought.
+- **`--fail-on` needed its own exit code.** Reusing a validation-error code
+  would have meant a CI job could not distinguish "the tool broke" from "the
+  tool worked and you should look" — and a job that cannot tell them apart gets
+  configured to ignore both.
+- **`cache clear` has two modes because the cache has two kinds of state.**
+  Derived facts are always safe to drop. Watch cursors and dismissals are not
+  derived: dropping them means re-reviewing pull requests and seeing dismissed
+  findings again. That takes asking for, explicitly.
+- **Clearing watch state clears the review budget with it.** Otherwise a
+  forgotten cursor would be re-reviewed against an hourly budget already spent
+  on the review being forgotten.
+- **The fresh-clone walkthrough found a bug nothing else could have.** On a
+  clean checkout the fixture bootstrap *aborted partway through*, leaving a
+  corpus missing branches and an evaluation reporting two confident, wrong
+  regressions. Cause: the overlay copy preserved the source file's modification
+  time, and git decides whether a file changed from a stat cache — size plus
+  mtime — before it looks at contents. A fresh `git clone` writes every file
+  with the same timestamp, so a same-length overlay edit read as untouched,
+  staged nothing, and failed as an empty commit. A one-character version bump
+  in a manifest is exactly a same-length edit, which is what tripped it.
+  Invisible in the working repository, where files have different mtimes. Now
+  fixed, and pinned by a test that reproduces the fresh-clone condition
+  directly — identical size, identical mtime, different contents.
 
 ---
 

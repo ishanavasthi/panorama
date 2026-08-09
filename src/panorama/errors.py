@@ -12,6 +12,13 @@ EXIT_PREFLIGHT_ERROR = 2
 EXIT_CLAUDE_INVOCATION_ERROR = 3
 EXIT_VALIDATION_ERROR = 4
 
+#: A review completed successfully and *found something* at or above the
+#: severity the caller said it cared about. Deliberately distinct from every
+#: error code: "the tool broke" and "the tool worked and you should look" are
+#: different outcomes, and a CI job that cannot tell them apart will eventually
+#: be configured to ignore both.
+EXIT_FINDINGS_AT_THRESHOLD = 5
+
 
 class PanoramaError(Exception):
     """Base class for all Panorama-raised errors.
