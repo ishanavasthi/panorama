@@ -53,6 +53,9 @@ class DemoResult:
     owner: str
     repos: list[str] = field(default_factory=list)
     prs: list[SeededPR] = field(default_factory=list)
+    #: Repositories that already existed and were refreshed in place, as
+    #: opposed to created. Reported so a run says which it did.
+    updated: list[str] = field(default_factory=list)
 
 
 def demo_repo_names(source_root: Path = DATA_ROOT) -> list[str]:
@@ -74,12 +77,14 @@ class DemoSeeder:
         git_path: str = "git",
         run: CommandRunner | None = None,
         recreate: bool = False,
+        update: bool = False,
     ) -> None:
         self.owner = owner
         self.source_root = source_root
         self.gh_path = gh_path
         self.git_path = git_path
         self.recreate = recreate
+        self.update = update
         self._run = run if run is not None else self._subprocess_run
 
     # -- command plumbing ---------------------------------------------------
@@ -134,18 +139,92 @@ class DemoSeeder:
                 return (data.get("title") or branch, data.get("body") or "")
         return branch, ""
 
-    def _ensure_absent(self, slug: str) -> None:
+    def _resolve_existing(self, slug: str) -> bool:
+        """Decide what to do about a repository that is already there.
+
+        Returns True when the caller should *update* it in place rather than
+        create it. Three modes, and the default is still to refuse: creating
+        repositories is the one thing this command does that cannot be undone by
+        running it again.
+        """
         if not self._gh_ok("repo", "view", slug):
-            return
-        if not self.recreate:
-            raise DemoError(
-                f"repository {slug} already exists. Re-run with --recreate to replace "
-                "it (needs the delete_repo scope), or seed under a different owner."
-            )
-        self._gh("repo", "delete", slug, "--yes", what=f"delete existing {slug}")
+            return False
+        if self.recreate:
+            self._gh("repo", "delete", slug, "--yes", what=f"delete existing {slug}")
+            return False
+        if self.update:
+            return True
+        raise DemoError(
+            f"repository {slug} already exists. Re-run with --update to refresh it "
+            "in place, or --recreate to replace it (which needs the delete_repo "
+            "scope), or seed under a different owner."
+        )
+
+    def _create(self, repo, slug: str) -> None:
+        # gh handles auth and configures the local repo so the follow-up push
+        # reuses its credential helper. No token is handled here.
+        self._gh(
+            "repo", "create", slug, "--private", "--source", str(repo.path),
+            "--remote", "origin", "--push",
+            cwd=repo.path, what=f"create private repository {slug}",
+        )
+        self._git(
+            "-C", str(repo.path), "push", "origin", "--all",
+            what=f"push branches to {slug}",
+        )
+
+    def _refresh(self, repo, slug: str) -> None:
+        """Force the existing repository to match the current fixture data.
+
+        The fixtures are rebuilt from scratch on every bootstrap, so their
+        commits are new objects with no ancestry in common with whatever is on
+        the remote. A fast-forward is therefore impossible by construction and
+        the push has to be forced — which is safe here in a way it would never
+        be elsewhere, because these repositories are *generated*: every byte is
+        reproducible from the checked-in data tree.
+
+        Updating in place rather than deleting and recreating keeps the demo's
+        existing pull requests and their review comments, which are the most
+        interesting thing in the organisation. It also works with an ordinary
+        `repo` token, where deletion needs a scope most people do not grant.
+        """
+        # A plain HTTPS remote: gh's credential helper supplies the token, so
+        # none is ever written into a URL or handled here.
+        self._run(
+            [self.git_path, "-C", str(repo.path), "remote", "add", "origin",
+             f"https://github.com/{slug}.git"]
+        )
+        self._git(
+            "-C", str(repo.path), "push", "--force", "origin", "--all",
+            what=f"update branches on {slug}",
+        )
+
+    def _open_branches(self, slug: str) -> set[str]:
+        """Branches that already have an open pull request.
+
+        Read so an update does not try to open a second pull request for a
+        branch that has one — `gh pr create` fails in that case, and failing
+        the whole run over an existing pull request would make `--update`
+        unusable exactly when it is most useful.
+        """
+        rc, out = self._run(
+            [self.gh_path, "pr", "list", "--repo", slug, "--state", "open",
+             "--json", "headRefName", "--limit", "100"]
+        )
+        if rc != 0:
+            return set()
+        try:
+            listed = json.loads(out or "[]")
+        except ValueError:
+            return set()
+        return {
+            str(item.get("headRefName"))
+            for item in listed
+            if isinstance(item, dict) and item.get("headRefName")
+        }
 
     def seed(self) -> DemoResult:
-        """Create every repository, push its branches, and open the demo PRs."""
+        """Create or refresh every repository and open any missing demo PRs."""
         self.preflight()
 
         with tempfile.TemporaryDirectory(prefix="panorama-demo-") as tmp:
@@ -154,24 +233,20 @@ class DemoSeeder:
 
             for repo in built.repos:
                 slug = f"{self.owner}/{repo.name}"
-                self._ensure_absent(slug)
+                existing = self._resolve_existing(slug)
 
-                # Create the private repo from the local checkout and push main,
-                # then push the remaining seeded branches. gh handles auth and
-                # configures the local repo so the follow-up push reuses it.
-                self._gh(
-                    "repo", "create", slug, "--private", "--source", str(repo.path),
-                    "--remote", "origin", "--push",
-                    cwd=repo.path, what=f"create private repository {slug}",
-                )
-                self._git(
-                    "-C", str(repo.path), "push", "origin", "--all",
-                    what=f"push branches to {slug}",
-                )
+                if existing:
+                    self._refresh(repo, slug)
+                    result.updated.append(repo.name)
+                    already_open = self._open_branches(slug)
+                else:
+                    self._create(repo, slug)
+                    already_open = set()
+
                 result.repos.append(repo.name)
 
                 for branch in repo.branches:
-                    if branch == _MAIN_BRANCH:
+                    if branch == _MAIN_BRANCH or branch in already_open:
                         continue
                     title, body = self._pr_meta(repo.name, branch)
                     out = self._gh(

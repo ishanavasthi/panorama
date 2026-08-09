@@ -537,13 +537,15 @@ than buried.
 - [x] Test: the cursor only advances after a review actually completes
 - [x] Test: `gh` stderr is never echoed, so a token hint cannot leak into a log
 - [x] 41 new tests; ruff clean
-- [ ] Live: push to a seeded demo PR → exactly one review appears
-- [ ] Live: push again → exactly one update, not a second comment
+- [x] Live: push to a seeded demo PR → exactly one review appears
+- [x] Live: push again → exactly one update, not a second comment
+- [x] Live: watcher polled a real organisation, found 18 open pull requests
+      across 6 repositories in one query, honoured the hourly cap, posted
+      nothing in dry run
+- [x] Live: re-run skipped both reviewed pull requests as *already reviewed at
+      this commit*, with no model calls
 
-**Exit: partially met.** Everything is built and covered offline. The two live
-checks need `panorama demo --github` against a real account, which creates
-private repositories — an outward-facing action that is never run automatically
-and needs the maintainer to invoke it.
+**Exit met**, against the `acmepanorama` organisation.
 
 ### Findings from V2.9
 
@@ -567,6 +569,29 @@ and needs the maintainer to invoke it.
 - **ETags were dropped for a measured reason, not skipped.** One GraphQL
   request per poll for an entire owner is already cheaper than the conditional
   REST alternative it would replace.
+
+### What the live run against a real organisation found
+
+- **Sibling checkouts were never updated after the first clone.** `provision`
+  fetched and stopped. `git fetch` moves remote-tracking refs and leaves the
+  working tree exactly where it was — and retrieval greps the *working tree*.
+  So every review of an organisation after the first silently searched whatever
+  each sibling looked like on the day it was first cloned. On the live org this
+  showed as a conventions repository stuck two days back, missing the manifest
+  added since, which made the dependency channel silent on a pull request it had
+  ranked correctly in the fixtures. **The review was not wrong so much as
+  answering a question about the past** — the worst kind of failure, because
+  nothing about it looks broken. Now reset to the remote's default branch, with
+  a test that pushes upstream between two provisions.
+- **`demo --github` could not refresh an organisation it had already seeded.**
+  The only option was `--recreate`, which deletes — needing a `delete_repo`
+  scope most tokens do not carry, and destroying the pull requests and review
+  comments that make the demo worth showing. Added `--update`: force-push the
+  current fixture data into the existing repositories and open only the pull
+  requests that are missing.
+- Neither of these was reachable offline. The fixture tests bootstrap a fresh
+  organisation every run, so "the second review of an organisation" is a state
+  they never enter.
 
 ---
 

@@ -1638,14 +1638,47 @@ the same spirit, `gh`'s stderr is never echoed — it is the likeliest place for
 token hint or an operator's path to appear — so failures are classified into
 "slow down", "retry shortly", or "report this" and re-authored locally.
 
-### What is not done
+### The live run, and the two things only it could find
 
-The two live checks — push to a seeded pull request and see exactly one review
-appear, push again and see exactly one *update* rather than a second comment —
-need `panorama demo --github` against a real account, which creates private
-repositories. That is an outward-facing action, it is never run automatically,
-and it waits for the maintainer. Everything else is covered offline, including
-rate limiting, network failure and recovery, restart resumption, and shutdown.
+Run against a real private organisation of six repositories and eighteen open
+pull requests. Both live checks passed: posting twice produced **one** comment,
+edited rather than duplicated; pushing a new commit and re-reviewing produced
+**one update**, still a single comment. The watcher found all eighteen pull
+requests in one query, honoured its hourly cap, posted nothing in dry run, and
+on a second poll skipped the two it had already reviewed as *already reviewed at
+this commit* without calling the model at all.
+
+It also found two problems that no offline test could have.
+
+**Sibling checkouts were never updated after the first clone.** Provisioning
+fetched and stopped. `git fetch` moves the remote-tracking refs and leaves the
+working tree exactly where it was — and retrieval greps the *working tree*. So
+every review of an organisation after the first silently searched whatever each
+sibling looked like on the day it was first cloned.
+
+On the live organisation this appeared as a conventions repository stuck two
+days in the past, missing a manifest that had been added since — which made the
+dependency-graph channel silent on precisely the pull request it ranks correctly
+in the fixtures. The review still produced a sensible finding, which is what
+makes this the worst kind of bug: **nothing about the output looks wrong.** It
+was answering a question about the past.
+
+The reason no test caught it is worth recording. Every fixture test bootstraps a
+fresh organisation, so "the second review of an organisation, after upstream
+moved" is a state the offline suite never enters. There is now a test that
+enters it deliberately: provision, push upstream, provision again, assert the
+working tree moved.
+
+**`demo --github` could not refresh an organisation it had already seeded.** The
+only option was `--recreate`, which deletes the repositories — needing a
+`delete_repo` scope most tokens do not carry, and destroying the pull requests
+and review comments that are the most interesting thing in a demo organisation.
+`--update` now force-pushes the current fixture data into the existing
+repositories and opens only the pull requests that are missing. Force is correct
+here for a reason that would not hold anywhere else: the fixtures are rebuilt
+from scratch on each bootstrap, so their commits share no ancestry with the
+remote and a fast-forward is impossible by construction — and every byte is
+reproducible from the checked-in data tree.
 
 ## V2.10 — not repeating yourself
 

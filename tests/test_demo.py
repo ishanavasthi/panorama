@@ -178,3 +178,105 @@ def test_cli_demo_yes_skips_the_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
     result = CliRunner().invoke(cli.app, ["demo", "--github", "testorg", "--yes"])
     assert result.exit_code == 0, result.output
     assert _RecordingSeeder.instances[-1].seeded
+
+
+# ---------------------------------------------------------------------------
+# --update: refreshing an organisation that already exists
+# ---------------------------------------------------------------------------
+
+
+class ExistingOrg(FakeRunner):
+    """Every repository already exists, and some branches already have PRs."""
+
+    def __init__(self, *, open_branches=()) -> None:
+        super().__init__(existing=set())
+        self.open_branches = list(open_branches)
+
+    def __call__(self, argv, *, cwd=None, input_text: str = ""):
+        argv = list(argv)
+        tail = argv[1:]
+        if tail[:2] == ["repo", "view"]:
+            self.calls.append(argv)
+            return (0, "")  # everything exists
+        if tail[:2] == ["pr", "list"]:
+            self.calls.append(argv)
+            import json as _json
+
+            return (0, _json.dumps([{"headRefName": b} for b in self.open_branches]))
+        return super().__call__(argv, cwd=cwd, input_text=input_text)
+
+
+def test_update_refreshes_instead_of_creating() -> None:
+    runner = ExistingOrg()
+    result = _seeder(runner, update=True).seed()
+
+    assert not runner.with_argv("repo", "create"), "nothing should be created"
+    assert not runner.with_argv("repo", "delete"), "nothing should be deleted"
+    assert set(result.updated) == set(demo_repo_names())
+
+    forced = [c for c in runner.calls if "push" in c and "--force" in c]
+    assert forced, "an existing repository has to be force-pushed"
+
+
+def test_update_does_not_need_the_delete_scope() -> None:
+    """The practical reason `--update` exists: an ordinary `repo` token cannot
+    delete, so `--recreate` is unavailable to most people."""
+    runner = ExistingOrg()
+    _seeder(runner, update=True).seed()
+    assert not runner.with_argv("repo", "delete")
+
+
+def test_update_skips_branches_that_already_have_a_pull_request() -> None:
+    """`gh pr create` fails on a branch that already has one open, and failing
+    the whole run over that would make --update unusable exactly when it is
+    most useful."""
+    every_branch = [
+        b
+        for repo in demo_repo_names()
+        for b in _branches_of(repo)
+    ]
+    runner = ExistingOrg(open_branches=every_branch)
+    result = _seeder(runner, update=True).seed()
+
+    assert result.prs == []
+    assert not runner.with_argv("pr", "create")
+
+
+def test_update_opens_a_pull_request_for_a_new_branch() -> None:
+    runner = ExistingOrg(open_branches=["p1-rename"])
+    result = _seeder(runner, update=True).seed()
+
+    opened = {pr.branch for pr in result.prs}
+    assert "p1-rename" not in opened
+    assert opened, "the branches without a pull request should get one"
+
+
+def test_without_update_an_existing_repository_is_still_refused() -> None:
+    """The default stays conservative: creating repositories is the one thing
+    here that re-running cannot undo."""
+    runner = ExistingOrg()
+    with pytest.raises(DemoError, match="--update"):
+        _seeder(runner).seed()
+
+
+def test_update_never_puts_a_token_in_a_remote_url() -> None:
+    """`gh` owns the credential; the remote is a plain HTTPS URL and the
+    credential helper supplies auth."""
+    runner = ExistingOrg()
+    _seeder(runner, update=True).seed()
+
+    remotes = [c for c in runner.calls if "remote" in c and "add" in c]
+    assert remotes
+    for call in remotes:
+        url = call[-1]
+        assert url.startswith("https://github.com/")
+        assert "@" not in url and "token" not in url.lower()
+
+
+def _branches_of(repo: str) -> list[str]:
+    from panorama.fixtures.bootstrap import DATA_ROOT
+
+    branches = DATA_ROOT / repo / "branches"
+    if not branches.is_dir():
+        return []
+    return sorted(p.name for p in branches.iterdir() if p.is_dir())

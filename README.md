@@ -285,9 +285,21 @@ uv run panorama demo --github <your-user-or-org>
 This **creates one private repository per fixture repo** (`acme-api`,
 `acme-web`, `acme-shared`, `acme-contracts`, `acme-analytics`, `acme-gateway`)
 and opens a pull request for each seeded change — the same defects the offline
-evaluation uses. It always confirms before writing
-(pass `--yes` to skip the prompt, `--recreate` to replace existing repos). Then
-review a seeded PR live, optionally posting the result back:
+evaluation uses. It always confirms before writing (pass `--yes` to skip the
+prompt).
+
+To refresh an organisation you have already seeded — after the fixtures change,
+or to add repositories that did not exist before:
+
+```bash
+uv run panorama demo --github <your-user-or-org> --update
+```
+
+`--update` force-pushes the current fixture data into the existing repositories
+and opens only the pull requests that are missing, **keeping existing pull
+requests and their review comments**. `--recreate` deletes and rebuilds instead,
+which needs the `delete_repo` scope. Then review a seeded PR live, optionally
+posting the result back:
 
 ```bash
 uv run panorama review <your-user-or-org>/acme-api#1 --post

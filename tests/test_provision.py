@@ -410,3 +410,61 @@ def test_a_repository_without_any_manifest_is_not_an_error(
     with prov:
         workspace = prov.provision(org.pull_request("acme-api", "p1-rename"))
     assert "acme-api" in {r.name for r in workspace.repos()}
+
+
+def test_a_second_run_updates_the_sibling_working_tree(
+    org: LocalOrg, ws_root: Path
+) -> None:
+    """Fetching alone leaves the checkout where it was, and retrieval greps the
+    *working tree*.
+
+    Without resetting to the remote's default branch, every review after the
+    first would silently search whatever a sibling looked like on the day it was
+    first cloned — a review that is not wrong so much as answering a question
+    about the past. Found by running against a real organisation, where a
+    sibling's checkout was two days stale and a manifest added since had simply
+    never arrived.
+    """
+    pr = org.pull_request("acme-api", "p1-rename")
+    with _provisioner(org, ws_root) as prov:
+        prov.provision(pr)
+
+    sibling = ws_root / "acme" / "acme-web"
+    assert not (sibling / "NEW-FILE.md").exists()
+
+    # Somebody pushes to the sibling's default branch.
+    source = org.source_root / "acme-web"
+    (source / "NEW-FILE.md").write_text("added upstream\n")
+    _git("git", "-C", str(source), "add", "-A")
+    _git(
+        "git", "-C", str(source),
+        "-c", "user.name=t", "-c", "user.email=t@t",
+        "commit", "-m", "upstream change",
+    )
+    _git("git", "-C", str(source), "push", str(org.remotes["acme-web"]), "main")
+
+    with _provisioner(org, ws_root) as prov:
+        prov.provision(pr)
+
+    assert (sibling / "NEW-FILE.md").is_file(), (
+        "the sibling checkout was fetched but never updated"
+    )
+
+
+def test_updating_survives_a_missing_remote_head(org: LocalOrg, ws_root: Path) -> None:
+    """An older clone may have no `refs/remotes/origin/HEAD`; it is re-derived
+    from the remote rather than guessed from a list of popular branch names."""
+    pr = org.pull_request("acme-api", "p1-rename")
+    with _provisioner(org, ws_root) as prov:
+        prov.provision(pr)
+
+    sibling = ws_root / "acme" / "acme-web"
+    subprocess.run(
+        ["git", "-C", str(sibling), "symbolic-ref", "-d", "refs/remotes/origin/HEAD"],
+        capture_output=True,
+    )
+
+    with _provisioner(org, ws_root) as prov:
+        workspace = prov.provision(pr)
+
+    assert "acme-web" in {r.name for r in workspace.repos()}

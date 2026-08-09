@@ -314,6 +314,19 @@ class WorkspaceProvisioner:
         )
 
     def _update(self, dest: Path) -> None:
+        """Bring an existing clone up to date — refs *and* working tree.
+
+        Fetching alone is not enough, and getting this wrong is invisible.
+        `git fetch` moves the remote-tracking refs and leaves the checkout
+        exactly where it was; retrieval greps the **working tree**, so a
+        fetch-only update means every review after the first silently searches
+        whatever the sibling looked like on the day it was first cloned. The
+        review is not wrong so much as answering a question about the past.
+
+        So the checkout is reset to the remote's default branch. That is safe
+        here in a way it would not be in a repository someone works in: these
+        clones are Panorama's own, read-only, and never edited by hand.
+        """
         self._run(
             self.git_path,
             "-C",
@@ -324,6 +337,51 @@ class WorkspaceProvisioner:
             "origin",
             what=f"update {dest.name}",
         )
+
+        target = self._default_remote_ref(dest)
+        if target is None:
+            # Nothing to reset onto — a repository with no remote default is
+            # odd but not fatal, and a stale checkout beats a failed review.
+            return
+        self._run(
+            self.git_path,
+            "-C",
+            str(dest),
+            "reset",
+            "--hard",
+            target,
+            what=f"update the {dest.name} checkout",
+        )
+
+    def _default_remote_ref(self, dest: Path) -> str | None:
+        """The remote's default branch, e.g. ``origin/main``.
+
+        `git clone` records this as `refs/remotes/origin/HEAD`. It can go
+        missing — an older clone, or a repository whose default branch was
+        renamed — so it is re-derived from the remote when absent rather than
+        guessed at from a list of popular branch names.
+        """
+        proc = subprocess.run(
+            [self.git_path, "-C", str(dest), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+
+        subprocess.run(
+            [self.git_path, "-C", str(dest), "remote", "set-head", "origin", "--auto"],
+            capture_output=True,
+            text=True,
+        )
+        proc = subprocess.run(
+            [self.git_path, "-C", str(dest), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+        return None
 
     # -- head-SHA checkout --------------------------------------------------
 

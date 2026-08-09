@@ -413,6 +413,15 @@ def demo(
         "--recreate",
         help="Replace demo repositories that already exist (needs the delete_repo scope).",
     ),
+    update: bool = typer.Option(
+        False,
+        "--update",
+        help=(
+            "Refresh repositories that already exist, force-pushing the current "
+            "fixture data and opening any missing pull requests. Keeps existing "
+            "pull requests and their comments."
+        ),
+    ),
     yes: bool = typer.Option(
         False,
         "--yes",
@@ -432,18 +441,28 @@ def demo(
     )
     if recreate:
         typer.echo("--recreate: any existing repositories with these names will be DELETED first.")
+    if update:
+        typer.echo(
+            "--update: existing repositories will be FORCE-PUSHED to match the "
+            "current fixture data. Their history is replaced; their pull requests "
+            "and comments are kept."
+        )
+    if recreate and update:
+        raise typer.BadParameter("pass either --recreate or --update, not both.")
     if not yes:
         typer.confirm("Proceed?", abort=True)
 
     try:
-        result = DemoSeeder(github, recreate=recreate).seed()
+        result = DemoSeeder(github, recreate=recreate, update=update).seed()
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
+    created = len(result.repos) - len(result.updated)
     typer.echo(
         f"Seeded {len(result.repos)} repositories under '{github}' "
-        f"with {len(result.prs)} pull request(s):"
+        f"({created} created, {len(result.updated)} updated) "
+        f"with {len(result.prs)} new pull request(s):"
     )
     for pr in result.prs:
         suffix = f" -> {pr.url}" if pr.url else ""
