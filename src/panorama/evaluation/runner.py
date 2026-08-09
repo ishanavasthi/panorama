@@ -51,22 +51,42 @@ def _load_case_pr(case: EvalCase, org_root: Path) -> tuple[PullRequest, Workspac
 
 
 def retrieve_for_case(
-    case: EvalCase, org_root: Path = DEMO_ORG_ROOT
+    case: EvalCase,
+    org_root: Path = DEMO_ORG_ROOT,
+    *,
+    experimental: tuple[str, ...] = (),
 ) -> tuple[PullRequest, Workspace, RetrievalResult]:
-    """Intake + retrieval for one case. No model, no network."""
+    """Intake + retrieval for one case. No model, no network.
+
+    No cache is passed, deliberately. A scored run that depends on state left
+    behind by an earlier run is not a measurement — and the cache is required to
+    change only *effort*, so measuring without it measures the same thing.
+    """
     pull_request, workspace = _load_case_pr(case, Path(org_root))
-    return pull_request, workspace, retrieve(pull_request, workspace)
+    return (
+        pull_request,
+        workspace,
+        retrieve(pull_request, workspace, experimental=experimental),
+    )
 
 
 def run_offline(
-    cases: list[EvalCase], *, org_root: Path = DEMO_ORG_ROOT
+    cases: list[EvalCase],
+    *,
+    org_root: Path = DEMO_ORG_ROOT,
+    experimental: tuple[str, ...] = (),
 ) -> tuple[list[RetrievalCaseScore], list[CaseFailure]]:
-    """Score retrieval for every case. Deterministic; safe in CI."""
+    """Score retrieval for every case. Deterministic; safe in CI.
+
+    ``experimental`` turns on channels that are not enabled by default, so the
+    claim "it did not help" is something anyone can reproduce rather than
+    something they have to take on trust.
+    """
     scores: list[RetrievalCaseScore] = []
     failures: list[CaseFailure] = []
     for case in cases:
         try:
-            _, _, result = retrieve_for_case(case, org_root)
+            _, _, result = retrieve_for_case(case, org_root, experimental=experimental)
         except PanoramaError as exc:
             failures.append(CaseFailure(case.id, exc.message))
             continue

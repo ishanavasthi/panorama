@@ -264,6 +264,7 @@ PRODUCTION_MODULES = (
     "panorama.cli",
     "panorama.cache",
     "panorama.channels",
+    "panorama.cochange",
     "panorama.config",
     "panorama.dependencies",
     "panorama.symbols",

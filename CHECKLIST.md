@@ -317,16 +317,57 @@ rather than a defect. Recorded in `DECISIONS.md` rather than worked around.
 
 ---
 
-## V2.6 — Co-change channel · **stretch**
+## V2.6 — Co-change channel · **DONE — shipped OFF, verdict recorded**
 
-- [ ] Same-author / same-window commit coupling
-- [ ] Cross-repo references mined from commit messages and branch names
-- [ ] Per-pair prior, cached
-- [ ] Measured on the fixture corpus
-- [ ] Measured on a real org (fixture history is shallow and will flatter it)
-- [ ] Decision recorded: on by default, or shipped off behind a flag
+- [x] Same-author / same-window commit coupling
+- [x] Cross-repo references mined from commit messages (shared ticket keys)
+- [x] Per-pair prior
+- [x] **Degeneracy guards**: repositories with too little history are excluded,
+      and a temporal signal that couples most pairs is discarded as
+      non-discriminating
+- [x] Measured on the fixture corpus — **it abstains entirely**
+- [ ] Measured on a real org — **not done.** This is what would justify turning
+      it on, and it is why it is off.
+- [x] Decision recorded: **shipped off, behind `--experimental cochange`**
+- [x] `panorama eval --experimental <name>` so the verdict is reproducible
+      rather than asserted
+- [x] Test: the mechanism fires on real history (shared ticket, discriminating
+      co-commit), so "abstained" is distinguishable from "broken"
+- [x] Test: a typo'd channel name is refused rather than silently enabling
+      nothing
+- [x] 18 new tests; ruff clean
 
-**Exit:** a recorded verdict either way. "Didn't help" is a valid, published result.
+**Exit met:** a recorded verdict. It is "not proven", and it is published rather
+than buried.
+
+### Findings from V2.6
+
+- **On the only corpus available, the channel abstains completely.** Every
+  fixture repository has a single commit on its default branch, so the
+  thin-history guard excludes all six and no pair is coupled. Enabling it changes
+  no number, which is verifiable with one command.
+- **That is the corpus being honest, not the channel failing.** `v2plan.md`
+  predicted this precisely: "the corpus of fixture repos has shallow synthetic
+  history, which is exactly the condition under which it will look better than
+  it is." The temptation was to enrich the fixture history so the channel had
+  something to find — which would have been manufacturing the evidence used to
+  justify it.
+- **The density guard is the part worth keeping.** A coupling prior is only
+  useful if it *discriminates*. One author creating an entire organisation in a
+  scripted burst couples every pair — and so does a small team that ships
+  everything on Fridays. A signal firing for most pairs carries no information,
+  so it is dropped and the report says it was dropped. This is a real-world
+  guard, not a fixture workaround.
+- **A silent channel must explain itself.** "It abstained" and "it is broken"
+  look identical from outside, so the channel always reports why it said
+  nothing, and the tests build organisations with genuine history to prove the
+  mechanism fires when there is something to find.
+- **Shipping off by default is the point, not a compromise.** An unmeasured
+  channel enabled by default is a quality claim nobody checked, and this project
+  does not make those. Turning it on requires a measurement on a real
+  organisation showing it helps cases the other channels miss.
+
+---
 
 ---
 

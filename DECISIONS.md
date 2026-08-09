@@ -1259,3 +1259,83 @@ subtraction, re-indenting a file would read as deleting and re-declaring
 everything in it, and every formatting change would look like a contract break.
 The formatting-only control in the corpus would have failed immediately, which
 is the corpus doing its job.
+
+## V2.6 — a channel that ships switched off
+
+### The result first
+
+The co-change channel is **built, tested, and disabled**. On the only corpus
+available it abstains entirely and changes no number. That is the recorded
+verdict, and it is published rather than buried, because "we built it and cannot
+show it helps" is a real result and hiding it would make every other number in
+this document less believable.
+
+### What it was supposed to do
+
+Read the *past* rather than the present. Repositories that have repeatedly been
+changed together are probably coupled in ways nobody wrote down — which is
+precisely the coupling the dependency graph and the symbol index are blind to,
+and precisely the third of the corpus where both of them are silent. If any
+channel could reach those HTTP-only relationships, this was the candidate.
+
+Two signals, both generic: a **shared ticket key** appearing in commits of two
+repositories, which is somebody stating on purpose that one piece of work spanned
+both; and **temporal co-commit**, the same author committing to two repositories
+inside a short window.
+
+### Why it says nothing here
+
+Every fixture repository has one commit on its default branch. The fixtures are
+built by a script, in one burst, by one author. So there is no history to derive
+a prior from, and what history there is would couple everything to everything.
+
+`v2plan.md` predicted this exactly when it marked the milestone a stretch: *"the
+corpus of fixture repos has shallow synthetic history, which is exactly the
+condition under which it will look better than it is."*
+
+The tempting move was to enrich the fixture history so the channel had something
+to find. That would have been manufacturing the evidence used to justify the
+thing being evaluated, and it would have produced a number that meant nothing.
+
+### The guards are the real deliverable
+
+Two of them, and neither is a fixture workaround:
+
+**Too little history is refused.** A prior derived from a handful of commits is a
+number, not evidence. Repositories below a minimum commit count are excluded and
+named in the report.
+
+**A signal that fires for nearly every pair is discarded.** A coupling prior is
+only useful if it *discriminates*. One author creating an organisation in a
+scripted burst couples every pair — and so does a five-person team that ships
+everything on a Friday afternoon. When temporal co-commit couples more than half
+of all possible pairs it carries no information, so it is dropped and the report
+says it was dropped. Without that guard this channel would hand fusion a vote for
+every sibling on every review, which is worse than silence.
+
+### Distinguishing "abstained" from "broken"
+
+A channel that ships disabled and says nothing is dangerous in a specific way:
+nobody can tell a working abstention from a dead implementation, and six months
+later somebody enables it and finds out.
+
+So the channel always explains its silence, and the tests build organisations
+with genuine history — several authors, months apart, shared ticket keys — and
+prove the mechanism actually fires. The abstention on the fixture corpus is then
+a statement about the corpus, not an untested claim about the code.
+
+### Making the verdict reproducible
+
+`panorama eval --experimental cochange` runs the whole corpus with the channel
+enabled. Anyone can check that the numbers are identical rather than taking this
+document's word for it. A typo'd channel name is refused rather than silently
+enabling nothing — otherwise "I measured it and it did not help" would be
+indistinguishable from "I measured nothing", which is the one conclusion this
+must not be able to fake.
+
+### What would turn it on
+
+A measurement on a real organisation with genuine history, showing it improves
+ranking on cases the other channels miss. Until that exists, it stays off. An
+unmeasured channel enabled by default is a quality claim nobody has checked, and
+the entire point of doing measurement before mechanism was to stop making those.

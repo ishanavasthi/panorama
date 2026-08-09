@@ -372,6 +372,11 @@ def eval(  # noqa: A001 - the command really is called `eval`
         help="Exit non-zero on a regression against the baseline.",
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit scores as JSON."),
+    experimental: list[str] = typer.Option(
+        None,
+        "--experimental",
+        help="Enable a channel that is off by default, to measure it (repeatable).",
+    ),
 ) -> None:
     """Score retrieval (and optionally review) against the labelled corpus.
 
@@ -416,7 +421,11 @@ def eval(  # noqa: A001 - the command really is called `eval`
         # A case that could not run is an environment failure, not a bad score.
         raise typer.Exit(EXIT_VALIDATION_ERROR if failures else 0)
 
-    scores, failures = run_offline(cases)
+    try:
+        scores, failures = run_offline(cases, experimental=tuple(experimental or ()))
+    except ValueError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(EXIT_VALIDATION_ERROR) from exc
     aggregate = aggregate_retrieval(scores)
 
     baseline = load_baseline(baseline_path)

@@ -143,8 +143,10 @@ panorama review --local <fixture-repo> --base main --head <branch> [--json]
 panorama fixtures bootstrap              # build local git repos under .panorama/demo-org/
 panorama demo --github <owner>           # explicit, confirmed private live seeding
 
+# V2 — shipped
+panorama eval [--live -k N] [--experimental <channel>]   # score against labelled cases
+
 # V2 — planned, in v2plan.md order
-panorama eval [--offline | --live -k N]  # score retrieval/review on labelled cases
 panorama watch <owner> [--post]          # local polling watcher; dry-run by default
 panorama status                          # cache size, watch cursors, recent runs
 panorama cache clear

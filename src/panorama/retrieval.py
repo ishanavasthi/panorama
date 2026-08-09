@@ -485,7 +485,15 @@ def _lexical_result(channel: LexicalChannel, found: LexicalPass) -> ChannelResul
     )
 
 
-def active_channels(cache: Cache | None = None) -> tuple[RetrievalChannel, ...]:
+#: Channels that exist but are not on by default, keyed by name. A channel lands
+#: here when it is built but its value has not been *measured* — shipping an
+#: unmeasured channel enabled would be making a quality claim nobody checked.
+EXPERIMENTAL_CHANNELS = ("cochange",)
+
+
+def active_channels(
+    cache: Cache | None = None, *, experimental: tuple[str, ...] = ()
+) -> tuple[RetrievalChannel, ...]:
     """The channels that contribute to a review, in a stable order.
 
     A function rather than a constant so the import graph stays one-directional
@@ -498,11 +506,34 @@ def active_channels(cache: Cache | None = None) -> tuple[RetrievalChannel, ...]:
     from panorama.dependencies import DependencyChannel
     from panorama.symbols import SymbolChannel
 
-    return (LexicalChannel(), DependencyChannel(), SymbolChannel(cache))
+    channels: list[RetrievalChannel] = [
+        LexicalChannel(),
+        DependencyChannel(),
+        SymbolChannel(cache),
+    ]
+
+    unknown = sorted(set(experimental) - set(EXPERIMENTAL_CHANNELS))
+    if unknown:
+        # A typo'd channel name that silently enabled nothing would look
+        # exactly like a channel that helped nothing.
+        raise ValueError(
+            f"unknown experimental channel(s): {', '.join(unknown)}. "
+            f"Known: {', '.join(EXPERIMENTAL_CHANNELS)}"
+        )
+    if "cochange" in experimental:
+        from panorama.cochange import CoChangeChannel
+
+        channels.append(CoChangeChannel())
+
+    return tuple(channels)
 
 
 def retrieve(
-    pr: PullRequest, workspace: Workspace, *, cache: Cache | None = None
+    pr: PullRequest,
+    workspace: Workspace,
+    *,
+    cache: Cache | None = None,
+    experimental: tuple[str, ...] = (),
 ) -> RetrievalResult:
     """Rank sibling repositories by how strongly the change points at them.
 
@@ -522,7 +553,7 @@ def retrieve(
 
     results = [
         channel.rank(pr, workspace)
-        for channel in active_channels(cache)
+        for channel in active_channels(cache, experimental=experimental)
         # The lexical pass has already run; re-running it would double the
         # `git grep` cost of every review to produce the same answer.
         if channel.name != lexical_channel.name

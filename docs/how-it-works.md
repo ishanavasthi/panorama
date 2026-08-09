@@ -164,7 +164,25 @@ Building this index means reading every source file in every sibling, which is
 the most expensive thing retrieval does, so it is cached per repository at a
 specific commit.
 
-**Still to come:** *co-change coupling* mined from history, as a stretch.
+**The co-change channel** exists but ships **disabled**. It reads history rather
+than the present, on the theory that repositories repeatedly changed together are
+coupled in ways nobody wrote down. Two signals: a shared ticket key appearing in
+both repositories' commits, and the same author committing to both inside a short
+window.
+
+It is off because it has never been shown to help. The fixture organisation is
+built by a script in one burst, so it has no meaningful history, and the channel
+correctly declines to guess. Turning it on requires a measurement on a real
+organisation — an unmeasured channel enabled by default is a quality claim
+nobody checked.
+
+Its two guards are worth knowing about, because they apply to real
+organisations too. A repository with too little history is excluded, since a
+prior from a handful of commits is a number rather than evidence. And a signal
+that couples *most* pairs is discarded as non-discriminating — a five-person
+team that ships everything on Friday would otherwise appear to have every
+repository coupled to every other, which says nothing while looking like it says
+a great deal.
 
 ### What the structural channels cannot see
 
