@@ -45,6 +45,7 @@ from panorama.provision import WorkspaceProvisioner
 from panorama.render import render_markdown, review_json_obj
 from panorama.retrieval import retrieve
 from panorama.review import context_truncated, run_review
+from panorama.selection import DEFAULT_CLONE_BUDGET
 from panorama.validation import validate_review
 from panorama.workspace import Workspace
 
@@ -166,6 +167,20 @@ def review(
         "--post",
         help="Post the review as a single, idempotent comment on the GitHub PR.",
     ),
+    all_repos: bool = typer.Option(
+        False,
+        "--all-repos",
+        help=(
+            "Clone every repository in the organisation instead of the top "
+            "candidates. Slower, but nothing is left unsearched."
+        ),
+    ),
+    clone_budget: int = typer.Option(
+        DEFAULT_CLONE_BUDGET,
+        "--clone-budget",
+        min=1,
+        help="How many repositories to clone when selecting (default 15).",
+    ),
 ) -> None:
     """Review a pull request end to end (local fixture or GitHub PR).
 
@@ -185,7 +200,13 @@ def review(
             raise typer.BadParameter("--post needs a GitHub PR; it cannot post to a local fixture.")
         _review_local(local, base, head, json_output=json_output)
     else:
-        _review_github(target, json_output=json_output, post=post)
+        _review_github(
+            target,
+            json_output=json_output,
+            post=post,
+            all_repos=all_repos,
+            clone_budget=clone_budget,
+        )
 
 
 def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
@@ -213,19 +234,33 @@ def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
 
 
 def _emit(
-    pull_request, validated, truncated: bool, ranked, *, json_output: bool
+    pull_request,
+    validated,
+    truncated: bool,
+    ranked,
+    *,
+    json_output: bool,
+    selection=None,
 ) -> None:
     if json_output:
         import json
 
         obj = review_json_obj(
-            pull_request, validated, retrieval_truncated=truncated, ranked_repos=ranked
+            pull_request,
+            validated,
+            retrieval_truncated=truncated,
+            ranked_repos=ranked,
+            selection=selection,
         )
         typer.echo(json.dumps(obj, indent=2))
     else:
         typer.echo(
             render_markdown(
-                pull_request, validated, retrieval_truncated=truncated, ranked_repos=ranked
+                pull_request,
+                validated,
+                retrieval_truncated=truncated,
+                ranked_repos=ranked,
+                selection=selection,
             )
         )
 
@@ -247,7 +282,14 @@ def _review_local(local: str, base: str, head: str, *, json_output: bool) -> Non
     _emit(pull_request, validated, truncated, ranked, json_output=json_output)
 
 
-def _review_github(target: str, *, json_output: bool, post: bool = False) -> None:
+def _review_github(
+    target: str,
+    *,
+    json_output: bool,
+    post: bool = False,
+    all_repos: bool = False,
+    clone_budget: int = DEFAULT_CLONE_BUDGET,
+) -> None:
     """Full pipeline over a GitHub pull request.
 
     Intake normalizes the PR (S7); the provisioner clones the organisation's
@@ -261,12 +303,22 @@ def _review_github(target: str, *, json_output: bool, post: bool = False) -> Non
     try:
         owner, repo, number = parse_pr_ref(target)
         pull_request = GitHubPullRequestSource(owner, repo, number).load()
-        with WorkspaceProvisioner(owner) as provisioner:
+        with WorkspaceProvisioner(
+            owner, budget=clone_budget, all_repos=all_repos
+        ) as provisioner:
             workspace = provisioner.provision(pull_request)
             runner = ClaudeRunner()
             validated, truncated, ranked = _run_pipeline(pull_request, workspace, runner)
+            selection = provisioner.selection
 
-        _emit(pull_request, validated, truncated, ranked, json_output=json_output)
+        _emit(
+            pull_request,
+            validated,
+            truncated,
+            ranked,
+            json_output=json_output,
+            selection=selection,
+        )
 
         if post:
             _post_review(

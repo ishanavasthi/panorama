@@ -425,21 +425,53 @@ than buried.
 
 ---
 
-## V2.8 — Manifest-first selection and blobless clone
+## V2.8 — Manifest-first selection and blobless clone · **DONE**
 
-- [ ] Phase 1: manifest + default-branch SHA via `gh api` contents, no clone
-- [ ] Dependency graph built from metadata alone
-- [ ] Phase 2: rank candidates, clone top N (default 15) blobless
-- [ ] On-demand working-tree materialisation
-- [ ] `--all-repos` escape hatch (V1 behaviour)
-- [ ] Old 50-repo ceiling replaced by the clone budget
-- [ ] Report states considered-vs-cloned counts
-- [ ] Selection recall reported as its own eval metric
-- [ ] Test: blobless clone + on-demand materialisation against local bare remotes
-- [ ] Test: the selection cut · `--all-repos` · an org above 50 repos
-- [ ] Test: selection never drops a labelled target on the corpus
+- [x] Phase 1: manifest via `gh api` contents, cloning nothing
+- [x] Dependency graph built from metadata alone — **the same resolver
+      retrieval uses**, so selection cannot drop what retrieval will ask for
+- [x] Phase 2: rank candidates, clone top N (default 15) blobless
+- [x] On-demand working-tree materialisation
+- [x] `--all-repos` escape hatch, plus `--clone-budget N`
+- [x] Old 50-repo ceiling replaced by the clone budget
+- [x] Report states considered-vs-examined counts, in Markdown and JSON
+- [x] Workspace view restricted to what was selected, so a clone left over from
+      an earlier run is never silently searched
+- [x] Cached symbol index consulted at selection time — the second review of an
+      organisation is better targeted than the first
+- [x] Test: blobless clone + working-tree materialisation against local bare
+      remotes, and that the production command really asks for it
+- [x] Test: the selection cut · `--all-repos` · an org of 126 repositories
+- [x] Test: selection never drops a labelled target at the default budget
+- [x] Test: **when a tight budget does drop a target, it is never silent**
+- [x] 37 new tests; ruff clean
 
-**Exit:** a review completes on a >50-repo org cloning ≤ 15.
+**Exit met:** a review completes on a 126-repository organisation cloning 4.
+
+### Findings from V2.8
+
+- **A real recall loss, found by its own test.** Squeezed below the size of the
+  corpus, selection drops the consumer in the field-rename case. Its coupling to
+  the changed repository is a *mirrored response type* — no manifest records it,
+  and on a cold cache no symbol index exists either. **No signal available
+  before cloning can see it.** The test now asserts the honest guarantee: the
+  loss is reported, the counts are printed on every run, and `--all-repos`
+  recovers it. It is pinned as a known limitation rather than left to be
+  discovered by someone trusting a thin review.
+- **The corpus fits inside the default budget**, so nothing is dropped in normal
+  use; the limitation only bites on organisations larger than the budget, which
+  is exactly where the report says so loudest.
+- **The metadata phase caught a live network dependency in the test suite.**
+  The provisioner tests took 57 seconds because every run was making real
+  `gh api` calls for an organisation that does not exist. Injecting the manifest
+  reader — as the clone step already was — dropped them to 9 seconds and made
+  them genuinely offline again.
+- **Selection reuses retrieval's edge resolution rather than reimplementing
+  it.** A selector that resolved declared names differently from the dependency
+  channel would drop repositories the channel was about to rank, which is the
+  most confusing failure this design could produce.
+
+---
 
 ---
 

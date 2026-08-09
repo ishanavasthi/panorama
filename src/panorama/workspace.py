@@ -157,8 +157,17 @@ def _convention_docs(repo_path: Path) -> list[str]:
 class Workspace:
     """A directory whose immediate children are git repositories."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, only: set[str] | None = None) -> None:
         self.root = Path(root).expanduser().resolve()
+        self.only = only
+        """Restrict the view to these repository names, or ``None`` for all.
+
+        Provisioning leaves clones from previous runs in place rather than
+        deleting work the next review may want. Without this restriction those
+        leftovers would be searched, so a review would quietly examine a
+        repository it did not select — and, worse, one that may be checked out
+        at some other run's commit.
+        """
 
     def exists(self) -> bool:
         return self.root.is_dir()
@@ -173,6 +182,8 @@ class Workspace:
         views: list[RepoView] = []
         for child in sorted(self.root.iterdir()):
             if not child.is_dir():
+                continue
+            if self.only is not None and child.name not in self.only:
                 continue
             sha = _head_sha(child)
             if sha is None:

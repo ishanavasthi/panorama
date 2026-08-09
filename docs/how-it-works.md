@@ -283,6 +283,46 @@ land.
 
 ---
 
+## Choosing what to clone
+
+An organisation can be far too large to clone whole, and cloning is the
+expensive part — not the reasoning. So provisioning happens in two phases.
+
+A **metadata phase** reads each repository's manifest through the API without
+cloning anything, cheap enough for hundreds of repositories. A **selection
+phase** then ranks candidates and clones only the top few, blobless, so history
+arrives without file contents while the working tree is materialised in full.
+The old "we refuse organisations above fifty repositories" ceiling becomes a
+*clone budget*.
+
+Candidates are ordered by: the pull request's own repository, always; then
+repositories connected by a declared dependency, using **exactly the same edge
+resolution the dependency channel uses**; then repositories a previous run's
+symbol index says touch the changed names; then whatever budget remains, filled
+in a stable order.
+
+### The risk this creates, and why it is tolerable
+
+Selection can be wrong, and when it is wrong it is **silent**. A relevant
+sibling that is never cloned produces no lead, no finding, and no warning — the
+review just comes back thinner. That is worse than a wrong finding, because a
+wrong finding is visible.
+
+This is not hypothetical. On the evaluation corpus, squeezing the budget below
+the organisation's size drops the repository that genuinely breaks in one case:
+its coupling is a mirrored response type, which no manifest records and no
+symbol index sees on a first run. Nothing available before cloning can find that
+relationship.
+
+What makes it acceptable is that it is never *silent*:
+
+- every review prints how many repositories were considered versus examined;
+- `--all-repos` clones everything, restoring the older behaviour;
+- the cached symbol index feeds selection, so the second review of an
+  organisation is better targeted than the first.
+
+---
+
 ## The cache: making it faster without making it wrong
 
 V2 adds persistent local state — a small SQLite database per organisation,

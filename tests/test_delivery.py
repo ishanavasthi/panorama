@@ -187,6 +187,10 @@ def _wire_common(monkeypatch, pr, validated):
         def __exit__(self, *e):
             return False
 
+        # V2.8: the provisioner records what it chose to clone, so the
+        # report can state considered-versus-examined counts.
+        selection = None
+
         def provision(self, _pr):
             return object()
 

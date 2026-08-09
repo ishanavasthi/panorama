@@ -281,6 +281,7 @@ PRODUCTION_MODULES = (
     "panorama.provision",
     "panorama.render",
     "panorama.retrieval",
+    "panorama.selection",
     "panorama.review",
     "panorama.screening",
     "panorama.validation",

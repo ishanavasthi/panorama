@@ -97,6 +97,7 @@ def render_markdown(
     *,
     retrieval_truncated: bool = False,
     ranked_repos: Sequence[Any] | None = None,
+    selection: Any | None = None,
 ) -> str:
     """Render the validated review as reference-only Markdown."""
     out: list[str] = [
@@ -121,6 +122,13 @@ def render_markdown(
 
     if ranked_repos is not None:
         out.extend(render_provenance(ranked_repos))
+
+    if selection is not None:
+        # Said on every run, not only when it bites. A review that examined 12
+        # of 140 repositories is a different claim from one that examined all
+        # of them, and the reader cannot tell the difference otherwise.
+        out.append(f"_{selection.summary()}_")
+        out.append("")
 
     out.append("---")
     out.append("")
@@ -159,6 +167,7 @@ def review_json_obj(
     *,
     retrieval_truncated: bool = False,
     ranked_repos: Sequence[Any] | None = None,
+    selection: Any | None = None,
 ) -> dict[str, Any]:
     """A stable, machine-readable view of the validated review.
 
@@ -189,4 +198,13 @@ def review_json_obj(
             }
             for entry in (ranked_repos or ())
         ],
+        "selection": (
+            None
+            if selection is None
+            else {
+                "considered": selection.n_considered,
+                "examined": selection.n_selected,
+                "complete": selection.complete,
+            }
+        ),
     }

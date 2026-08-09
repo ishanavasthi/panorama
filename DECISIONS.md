@@ -1439,3 +1439,87 @@ dependency edge, #3 by lexical overlap, not seen by the symbol index" is a
 sentence a reviewer can disagree with; a bare ordering is not. It also makes the
 silent cases legible — when nothing is surfaced, the report says so and says what
 was tried.
+
+## V2.8 — reviewing an organisation too big to clone
+
+### The decision
+
+V1 cloned every repository in the organisation and refused to run above fifty.
+That ceiling was a symptom of cloning everything, not a real limit on the idea —
+the expensive part is the clone, not the reasoning.
+
+So provisioning splits in two. A **metadata phase** reads each repository's
+manifest through the API without cloning anything, which is cheap enough for
+hundreds of repositories. Then a **selection phase** ranks candidates and clones
+only the top few, blobless. The fifty-repository ceiling becomes a *clone
+budget*, and a 126-repository organisation now reviews while cloning four.
+
+Selection reuses the dependency channel's own edge resolution rather than
+reimplementing it. A selector that resolved declared package names differently
+from the channel would drop repositories the channel was about to rank, which is
+the most confusing failure this design could produce.
+
+### The failure mode this introduces, stated plainly
+
+Selection can be wrong, and when it is wrong it is **silent**. A relevant
+sibling that is never cloned cannot be searched, so it produces no lead, no
+finding, and no warning. The review simply comes back thinner. That is worse
+than a wrong finding, because a wrong finding is visible and this is not.
+
+It is not hypothetical. Squeezing the budget below the size of the evaluation
+corpus drops the consumer in the field-rename case — the repository that
+genuinely breaks. Its coupling to the changed service is a *mirrored response
+type*: no manifest records it, and on a cold cache no symbol index exists yet.
+**Nothing available before cloning can see that relationship.**
+
+That is now a test. Not a test that it never happens — it does happen — but a
+test that it never happens *silently*: selection reports that it was incomplete,
+the report repeats the considered-versus-examined counts on every run, and
+`--all-repos` recovers every dropped target. The reporting is the actual
+guarantee, so the reporting is what is asserted.
+
+Three things bound the risk, and the corpus fits inside the default budget so
+none of it bites in ordinary use:
+
+- the counts are printed on every review, not only when something was dropped;
+- `--all-repos` restores V1 behaviour for anyone who would rather wait;
+- the cached symbol index is consulted during selection, so the *second* review
+  of an organisation is better targeted than the first.
+
+### Spending the budget rather than hoarding it
+
+Once the dependency edges and cached matches are exhausted, any remaining budget
+is filled in a stable alphabetical order. Filling a budget with arbitrary
+repositories looks unprincipled, and the reasoning is worth recording: the
+alternative is leaving it unspent, and an unspent budget is strictly worse. The
+lexical channel finds links through shared vocabulary and needs no declared edge
+to do it, so an extra cloned repository is an extra chance of a real hit at no
+additional risk. The order is deterministic, so two runs of the same review
+examine the same repositories.
+
+### Blobless clones
+
+History arrives without file contents and the working tree is materialised at
+checkout. A review greps the checked-out tree rather than history, so this skips
+work nothing was going to use — on a repository with a long history that is most
+of the download. Tested against local bare remotes, including that the tree
+really is materialised, because if it were not the whole approach would silently
+find nothing.
+
+### A stale-clone trap, closed
+
+Repositories cloned by a previous run are left in place rather than deleted —
+throwing away work the next review may want would be wasteful. But that means
+the workspace directory can contain repositories this review did not select, and
+possibly checked out at some other run's commit. The workspace view is therefore
+restricted to exactly what was selected. Without that, a review would quietly
+search a repository it never chose.
+
+### A test-suite bug this exposed
+
+The provisioning tests took 57 seconds, and the metadata phase revealed why:
+every run was making real `gh api` calls for an organisation that does not
+exist, waiting for each to fail. The clone step had always been injected; the
+new manifest step made the omission obvious. Injecting it too brought them to 9
+seconds and made them genuinely offline again — which they had been claiming to
+be in their own docstring.

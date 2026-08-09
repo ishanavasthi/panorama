@@ -262,6 +262,10 @@ def test_cli_github_branch_renders_a_validated_review(monkeypatch: pytest.Monkey
         def __exit__(self, *exc):
             return False
 
+        # V2.8: the provisioner records what it chose to clone, so the
+        # report can state considered-versus-examined counts.
+        selection = None
+
         def provision(self, _pr):
             return object()  # the workspace is unused: the pipeline is stubbed
 

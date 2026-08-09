@@ -151,13 +151,28 @@ def _facts_for(repo_path: Path) -> tuple[ManifestFacts, str | None]:
 
 
 def build_graph(workspace: Workspace) -> DependencyGraph:
-    """Read every repository's manifest and resolve the edges between them."""
+    """Read every repository's manifest from disk and resolve the edges."""
+    return graph_from_manifests(
+        {view.name: _facts_for(view.path) for view in workspace.repos()}
+    )
+
+
+def graph_from_manifests(
+    manifests: dict[str, tuple[ManifestFacts, str | None]],
+) -> DependencyGraph:
+    """Resolve edges from already-read manifest facts.
+
+    Separated from reading them so the graph can be built two ways that must
+    agree: from checkouts on disk, and from manifests fetched over the API
+    before anything has been cloned. Selection would otherwise reimplement
+    resolution, and a selection that resolved edges differently from retrieval
+    would drop repositories retrieval was about to ask for.
+    """
     graph = DependencyGraph()
 
-    for view in workspace.repos():
-        facts, language = _facts_for(view.path)
-        graph.nodes[view.name] = RepoNode(
-            repo=view.name,
+    for name, (facts, language) in manifests.items():
+        graph.nodes[name] = RepoNode(
+            repo=name,
             declared_name=facts.declared_name,
             dependencies=facts.dependencies,
             language=language,

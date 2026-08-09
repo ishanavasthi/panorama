@@ -317,6 +317,23 @@ class Cache:
                 (repo, head_sha, kind, blob),
             )
 
+    def known_shas(self, repo: str) -> tuple[str, ...]:
+        """Commits this cache holds facts for, newest first.
+
+        Only for *selection*, which asks the loose question "has this repository
+        ever looked relevant" before anything has been cloned. Nothing that
+        informs a finding may use this: `get_facts` and its exact-commit key
+        remain the only way to read a fact that reaches a review.
+        """
+        return tuple(
+            row["head_sha"]
+            for row in self._conn.execute(
+                "SELECT DISTINCT head_sha FROM repo_facts WHERE repo = ? "
+                "ORDER BY created_at DESC",
+                (repo,),
+            )
+        )
+
     def prune_repo(self, repo: str, keep_sha: str) -> int:
         """Drop every stored commit for ``repo`` except ``keep_sha``.
 
