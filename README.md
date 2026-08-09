@@ -77,6 +77,9 @@ the sharpest is a rename of a module-private helper no sibling can reference.
 `panorama fixtures bootstrap` builds all of them; `docs/corpus.md` explains what
 each case is for and, just as importantly, what the corpus does not cover.
 
+For how the system works under the hood — what each pipeline stage computes and
+why — read **`docs/how-it-works.md`**.
+
 ## Evaluation
 
 The fixtures were reviewed against a real Claude Code subscription, twice each,

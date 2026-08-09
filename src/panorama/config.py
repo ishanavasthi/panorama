@@ -20,6 +20,12 @@ from pathlib import Path
 WORKSPACE_ROOT = Path.home() / ".panorama" / "workspaces"
 RUN_ARTIFACT_ROOT = Path(".panorama") / "runs"
 
+#: Where the derived-facts cache lives, one SQLite file per owner. Beside the
+#: workspaces rather than under the project, because it describes checkouts that
+#: are themselves shared across projects — and because it is per-machine state,
+#: never something to commit. Always safe to delete; see `panorama/cache.py`.
+CACHE_ROOT = Path.home() / ".panorama" / "cache"
+
 #: Where `panorama fixtures bootstrap` materialises the local mock organisation
 #: as real git repositories. Under `.panorama/` so it is gitignored and never
 #: committed (no nested `.git` reaches the outer repo), relative to the cwd.

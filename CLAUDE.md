@@ -15,6 +15,18 @@ Live — these govern current work:
   updated only when a milestone actually produced one, and only *after* the
   implementation.
 
+Reference — explain the system rather than track it; update when the thing they
+describe changes:
+
+- **`docs/how-it-works.md`** — the mechanism walkthrough. What each stage
+  computes, from what, and why. The document to read (or hand someone) before
+  reading code.
+- **`docs/corpus.md`** — the evaluation corpus: what each case is for, why it is
+  labelled that way, what the corpus does *not* cover, and the rules for
+  changing it.
+- **`docs/m0-claude-boundary.md`** — the model sandbox: tools granted, tools
+  denied, and how untrusted repository content is kept away from instructions.
+
 Historical — read for context, do not edit:
 
 - **`v1plan.md`** — the V1 build order. Complete.

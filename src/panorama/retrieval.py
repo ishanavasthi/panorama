@@ -1,4 +1,4 @@
-"""Deterministic cross-repository retrieval.
+"""Deterministic cross-repository retrieval — the lexical channel.
 
 Given a normalized `PullRequest` and a `Workspace`, this produces the
 orientation the review runs on: a small ranked set of generic *signals* pulled
@@ -13,6 +13,19 @@ expected findings (hard constraint #2): it keys entirely off the diff and the
 workspace content.
 
 Read-only: the only external calls are `git grep` and reading files.
+
+**Where this sits in V2.** This is now *one* channel among several, implementing
+the interface in `channels.py`. Its mechanics live in `LexicalChannel`; the
+module-level `retrieve()` is the composition point that assembles what the
+review actually consumes. Today there is one channel, so composition is the
+identity — in V2.7 the same function fuses several rankings by reciprocal rank.
+
+Its known weakness is worth stating where someone will read it: this channel
+can only find a link that shares *vocabulary*. A convention violated by an
+absence leaves no vocabulary at all, and a helper duplicated across a
+naming-convention boundary — the same idea spelled in snake case in one
+language and camel case in another — is two different strings. Those are not
+tuning problems; they are what the structural channels exist to answer.
 """
 
 from __future__ import annotations
@@ -23,9 +36,21 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from panorama.channels import ChannelResult, Hit, competition_ranked
 from panorama.errors import PreflightError
 from panorama.intake import PullRequest
 from panorama.workspace import Workspace
+
+__all__ = [
+    "Hit",
+    "LexicalChannel",
+    "RepoRelevance",
+    "RetrievalResult",
+    "Signal",
+    "extract_signals",
+    "filter_diff",
+    "retrieve",
+]
 
 # --- caps: retrieval is orientation, not an index. Keep it bounded. --------
 MAX_SIGNALS_SEARCHED = 15
@@ -113,17 +138,6 @@ class Signal:
     def word(self) -> bool:
         """Whether the token is a bare word (so `git grep -w` is meaningful)."""
         return bool(re.fullmatch(r"\w+", self.token))
-
-
-@dataclass(frozen=True)
-class Hit:
-    """A sibling-repository line matched by a signal."""
-
-    repo: str
-    path: str
-    line: int
-    token: str
-    window: tuple[str, ...]
 
 
 @dataclass
@@ -326,59 +340,142 @@ def _window(repo_path: Path, rel: str, line: int, radius: int = WINDOW_RADIUS) -
     return tuple(f"{i + 1}: {lines[i]}" for i in range(lo, hi))
 
 
-def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
-    """Rank sibling repositories by how strongly the diff points at them."""
-    signals = extract_signals(pr.diff)
-    searched = signals[:MAX_SIGNALS_SEARCHED]
+@dataclass(frozen=True)
+class LexicalPass:
+    """Everything one lexical search produced, before it is shaped for a caller.
 
-    siblings = [r for r in workspace.repos() if r.name != pr.repo]
-    weight_by_token = {s.token: s.weight for s in searched}
+    Exists so the channel view and the pipeline view are built from *one*
+    computation rather than two that have to be kept agreeing. That is not
+    tidiness — it is the reason the refactor could be proven not to change
+    behaviour.
+    """
 
-    hits: list[Hit] = []
-    signal_repo_matches: dict[str, set[str]] = defaultdict(set)
-    truncated = False
+    signals: list[Signal]
+    searched: list[Signal]
+    hits: list[Hit]
+    ranked: list[RepoRelevance]
+    truncated: bool
 
-    for signal in searched:
-        for repo in siblings:
-            found = _git_grep(repo.path, signal.token, word=signal.word)
-            if not found:
-                continue
-            signal_repo_matches[signal.token].add(repo.name)
-            for path, line in found[:MAX_HITS_PER_SIGNAL_PER_REPO]:
-                if len(hits) >= MAX_TOTAL_HITS:
-                    truncated = True
-                    break
-                hits.append(
-                    Hit(
-                        repo=repo.name,
-                        path=path,
-                        line=line,
-                        token=signal.token,
-                        window=_window(repo.path, path, line),
+
+#: How many matched tokens a justification names before summarising the rest.
+_MAX_JUSTIFIED_TOKENS = 5
+
+
+class LexicalChannel:
+    """Shared vocabulary between the diff and its siblings.
+
+    The original V1 retrieval pass, unchanged in behaviour, now wearing the
+    channel interface. Strong on renames and duplicated helpers, because both
+    leave a distinctive token in two places. Blind to anything that shares no
+    vocabulary — see the module docstring.
+    """
+
+    name = "lexical"
+
+    def search(self, pr: PullRequest, workspace: Workspace) -> LexicalPass:
+        """Run the search and return everything it found."""
+        signals = extract_signals(pr.diff)
+        searched = signals[:MAX_SIGNALS_SEARCHED]
+
+        siblings = [r for r in workspace.repos() if r.name != pr.repo]
+        weight_by_token = {s.token: s.weight for s in searched}
+
+        hits: list[Hit] = []
+        signal_repo_matches: dict[str, set[str]] = defaultdict(set)
+        truncated = False
+
+        for signal in searched:
+            for repo in siblings:
+                found = _git_grep(repo.path, signal.token, word=signal.word)
+                if not found:
+                    continue
+                signal_repo_matches[signal.token].add(repo.name)
+                for path, line in found[:MAX_HITS_PER_SIGNAL_PER_REPO]:
+                    if len(hits) >= MAX_TOTAL_HITS:
+                        truncated = True
+                        break
+                    hits.append(
+                        Hit(
+                            repo=repo.name,
+                            path=path,
+                            line=line,
+                            token=signal.token,
+                            window=_window(repo.path, path, line),
+                        )
                     )
-                )
+                if truncated:
+                    break
             if truncated:
                 break
-        if truncated:
-            break
 
-    # Score each sibling by the DISTINCT signals that matched it, each signal
-    # weighted and discounted by how many repositories it hit — a token that
-    # matches everywhere is far less discriminating than one that matches once.
-    repo_signals: dict[str, set[str]] = defaultdict(set)
-    for hit in hits:
-        repo_signals[hit.repo].add(hit.token)
+        # Score each sibling by the DISTINCT signals that matched it, each signal
+        # weighted and discounted by how many repositories it hit — a token that
+        # matches everywhere is far less discriminating than one that matches once.
+        repo_signals: dict[str, set[str]] = defaultdict(set)
+        for hit in hits:
+            repo_signals[hit.repo].add(hit.token)
 
-    ranked: list[RepoRelevance] = []
-    for repo in siblings:
-        tokens = repo_signals.get(repo.name, set())
-        if not tokens:
-            continue
-        score = sum(
-            weight_by_token[t] / len(signal_repo_matches[t]) for t in tokens
+        ranked: list[RepoRelevance] = []
+        for repo in siblings:
+            tokens = repo_signals.get(repo.name, set())
+            if not tokens:
+                continue
+            score = sum(
+                weight_by_token[t] / len(signal_repo_matches[t]) for t in tokens
+            )
+            ranked.append(
+                RepoRelevance(repo=repo.name, score=round(score, 3), signals=sorted(tokens))
+            )
+        ranked.sort(key=lambda r: (-r.score, r.repo))
+
+        return LexicalPass(
+            signals=signals,
+            searched=searched,
+            hits=hits,
+            ranked=ranked,
+            truncated=truncated,
         )
-        ranked.append(RepoRelevance(repo=repo.name, score=round(score, 3), signals=sorted(tokens)))
-    ranked.sort(key=lambda r: (-r.score, r.repo))
+
+    def rank(self, pr: PullRequest, workspace: Workspace) -> ChannelResult:
+        """The channel-interface view of the same search."""
+        found = self.search(pr, workspace)
+        signals_by_repo = {entry.repo: entry.signals for entry in found.ranked}
+
+        def justify(repo: str, _score: float) -> str:
+            tokens = signals_by_repo.get(repo, [])
+            shown = ", ".join(tokens[:_MAX_JUSTIFIED_TOKENS])
+            extra = len(tokens) - _MAX_JUSTIFIED_TOKENS
+            if extra > 0:
+                shown = f"{shown} (+{extra} more)"
+            return f"shares {len(tokens)} identifier(s) with the diff: {shown}"
+
+        return ChannelResult(
+            channel=self.name,
+            ranked=competition_ranked(
+                [(entry.repo, entry.score) for entry in found.ranked], justify=justify
+            ),
+            hits=tuple(found.hits),
+            notes=(
+                ("hit cap reached; the search stopped early",) if found.truncated else ()
+            ),
+            truncated=found.truncated,
+        )
+
+
+#: The channels that contribute to a review, in a stable order. One today; the
+#: structural channels join it in V2.4 and V2.5, and V2.7 replaces the identity
+#: composition below with reciprocal rank fusion across all of them.
+ACTIVE_CHANNELS: tuple[LexicalChannel, ...] = (LexicalChannel(),)
+
+
+def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
+    """Rank sibling repositories by how strongly the diff points at them.
+
+    The composition point. With a single channel this is the identity, which is
+    exactly what the equivalence test pins down: V2.3 introduces the *seam*
+    without moving anything through it.
+    """
+    lexical = LexicalChannel().search(pr, workspace)
 
     convention_docs = {
         entry.name: entry.convention_docs
@@ -387,10 +484,10 @@ def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
     }
 
     return RetrievalResult(
-        signals=signals,
-        searched=searched,
-        hits=hits,
-        ranked_repos=ranked,
+        signals=lexical.signals,
+        searched=lexical.searched,
+        hits=lexical.hits,
+        ranked_repos=lexical.ranked,
         convention_docs=convention_docs,
-        truncated=truncated,
+        truncated=lexical.truncated,
     )

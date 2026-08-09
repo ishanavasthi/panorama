@@ -846,3 +846,159 @@ check, and it cost more time than the bug deserved.
 - **The fixture history is one commit per branch**, which is exactly the
   condition under which the co-change channel would look far better than it is.
   That channel cannot be trusted until it is measured on a real organisation.
+
+## V2.3 — foundations that are supposed to be invisible
+
+### The decision
+
+Build the three things the structural retrieval channels need — a cache, a table
+of what Panorama knows about each language, and an interface for a channel — and
+change nothing anyone can observe. The milestone's exit criterion is unusual and
+deliberately so: **if a number moved, there is a bug.**
+
+Foundation work is where quiet regressions get introduced, because there is no
+feature to notice them with. So this milestone spent most of its effort on
+proving absence of change rather than on the change itself.
+
+### Proving a refactor changed nothing
+
+The evaluation baseline proves that *ranking* did not move. That is not enough.
+Retrieval also decides which signals get extracted, in what order they are
+searched, which exact lines are matched, and how much surrounding context each
+lead carries — and all of that reaches the model. A silent change there is a
+silent change to review quality that no aggregate would ever report.
+
+So before touching anything, a snapshot of every observable field was recorded
+from the existing code, for all 18 cases, and checked in. The refactor then had
+to reproduce it exactly. The ordering matters: a snapshot taken *after* a
+refactor only proves the code agrees with itself.
+
+The obvious way to defeat this test is to regenerate the snapshot when it fails,
+which is why regenerating it is a deliberate, separate command that says in its
+own documentation that doing so to make a test pass is the one move that makes
+it worthless.
+
+### The cache, and the one rule it lives under
+
+V2 introduces persistent state for the first time. The constraint is that **the
+cache can only change what gets looked at, never whether a citation is real** —
+every citation is still validated against the live checkout at the reviewed
+commit, on every run, with no cache in that path.
+
+Three choices enforce that rather than merely intending it:
+
+**Everything is keyed by repository *and commit*.** Nothing is stored against a
+repository alone, so a commit that changes anything changes the key and the
+lookup simply misses. Invalidation stops being a policy that could be wrong and
+becomes the shape of the key. There is deliberately no "nearest commit" or
+"most recent entry" fallback — that is precisely the convenience that would let
+yesterday's index describe today's code — and a test exists whose only job is to
+prove that shortcut is absent.
+
+**A schema mismatch drops everything and rebuilds.** Everything stored is
+derived from repository content, so discarding it is always a legal repair.
+Writing incremental migrations for data you are allowed to delete is work that
+buys nothing and can itself be buggy.
+
+**A corrupt database is rebuilt, not raised.** A file somebody scribbled on must
+not be able to stop a review. Doing the work again is a far better failure than
+refusing to work.
+
+One consequence is worth stating rather than discovering later: milestones after
+this one store things here that are *not* derived from repository content —
+watch cursors, and dismissed findings. A schema rebuild drops those too. That
+means a re-review, or a dismissed finding coming back. Neither can make a review
+*wrong*: a returning finding is still fully validated, and a dismissal can only
+ever subtract. It is recoverable and visible, which is the standard this state
+is held to.
+
+### A bug this found
+
+The cache creates its tables on open, and creating them stamps the current
+schema version. The version check originally ran *after* that — so a database
+whose version row had gone missing would be re-stamped as current and keep its
+incompatible rows. It surfaced as a failing test written for a much smaller
+reason, and the fix is to read the version before any table is created.
+
+Worth recording because of its shape: it is the kind of bug that produces
+*wrong data* rather than a crash, and it would have gone unnoticed until a
+schema change silently failed to take effect.
+
+### Language packs, and a V1 ban narrowly reversed
+
+V1 explicitly deferred "a language-plugin framework". V2 needs to read three
+languages' manifests and recognise their exports and imports, so this reverses
+that — narrowly, and the boundary deserves stating precisely, because "it's just
+a table" is exactly what gets said right before a plugin system ships.
+
+What it is: a fixed set of entries in one file, read by name. What it
+deliberately is not: dynamically loaded, discoverable, registrable at runtime,
+or extensible by a third party. No lifecycle, no ordering contract, no way for
+one entry to observe another. Adding a language means adding a literal and its
+tests. If any of that stops being true, the reversal has gone too far.
+
+Two details in it carry real weight:
+
+**Dependency edges resolve declared name to declared name.** The tempting
+implementation matches a dependency string against a directory name in the
+workspace. It works perfectly on tidy fixtures and fails on real organisations,
+where `github.com/acme/api-server` publishes `@acme/api`. The corpus was built
+in V2.2 so that shortcut fails a test instead of passing one.
+
+**Comments are stripped before symbols are extracted**, so a file that
+*documents* a function does not look like a file that *exports* one.
+
+### Regex rather than a parser, and what that costs
+
+Symbol extraction uses anchored regular expressions, not an AST. It costs no
+dependency, and — more importantly — the evaluation harness can say empirically
+whether recall is good enough, which turns a possible future upgrade to real
+parsing into a *measured* decision rather than a speculative one.
+
+The honest cost is that a comment delimiter inside a string literal confuses the
+stripper and blinds the rest of that file. That loses a symbol here and there.
+The loss is safe in the direction that matters: a symbol not indexed is a lead
+not offered, never a citation invented. If measurement later shows regex recall
+is the binding constraint, that is the argument for tree-sitter.
+
+### Channels rank; they do not score
+
+Every channel returns its own ordered list rather than a comparable number.
+Channels measure genuinely incomparable things — a lexical overlap and a
+dependency-edge distance share no unit — and combining them by weighted sum
+would mean inventing weights, fitted on an 18-case corpus. That is overfitting
+with extra steps.
+
+Two properties of the interface exist for reasons beyond tidiness:
+
+- **Ties share a rank.** A repository that merely ties for the top must not be
+  promoted by alphabetical luck, because every metric built on rank would then
+  be partly measuring the alphabet. The evaluation scorer already worked this
+  way; the interface now does too.
+- **Every ranked repository carries a justification.** The report has to be able
+  to say *why* a repository was examined. "Ranked #1 by dependency edge, #3 by
+  lexical overlap, not seen by the symbol index" is a sentence a reviewer can
+  argue with; a bare ranking is not.
+
+And a channel with nothing to say returns an empty ranking, which is an ordinary
+outcome rather than a failure. That is not hypothetical: the dependency graph
+will be silent for a Python client of a TypeScript API, because no manifest
+anywhere records that edge. About a third of the corpus is built to be exactly
+that case, so fusion is forced to survive abstention.
+
+### A small correctness fix in the same area
+
+The first pass at import extraction tokenised every captured group, which turned
+the Go import `"encoding/json"` into two names, `encoding` and `json`. Both are
+symbols in no repository, and the path — which is the thing a dependency graph
+resolves on — was thrown away. Packs now declare whether a captured import group
+is a list of names to split apart or a single literal.
+
+### A new document
+
+`docs/how-it-works.md` was added: a walkthrough of the machinery for someone who
+wants to understand what the system does before reading code. The existing
+documents each answer a different question — the README answers *how do I run
+it*, this file answers *why is it built this way*, the corpus spec answers *what
+is it measured against* — and none of them answered *how does it work*. It is
+the document to hand someone before explaining the project.

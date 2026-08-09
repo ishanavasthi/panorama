@@ -262,8 +262,11 @@ FORBIDDEN_TOKENS = (
 # Every production module, so a fixture token cannot hide in one nobody listed.
 PRODUCTION_MODULES = (
     "panorama.cli",
+    "panorama.cache",
+    "panorama.channels",
     "panorama.config",
     "panorama.claude_runner",
+    "panorama.languages",
     "panorama.delivery",
     "panorama.demo",
     "panorama.doctor",

@@ -130,25 +130,64 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped (with rea
 
 ---
 
-## V2.3 — Cache, language packs, channel interface
+## V2.3 — Cache, language packs, channel interface · **DONE**
 
-- [ ] SQLite cache at `~/.panorama/cache/<owner>.db`, stdlib `sqlite3`
-- [ ] Mode `0600` enforced on file and parent
-- [ ] Tables keyed `(repo, head_sha)`; schema-version column
-- [ ] Drop-and-rebuild migration on version mismatch
-- [ ] Language pack table: manifest file, declared-name reader, dependency
+- [x] SQLite cache at `~/.panorama/cache/<owner>.db`, stdlib `sqlite3`
+- [x] Mode `0600` enforced on file and parent — restated on every open, not
+      only at creation
+- [x] Tables keyed `(repo, head_sha)`; schema-version column
+- [x] Drop-and-rebuild migration on version mismatch
+- [x] Corrupt or unreadable database recovered by rebuilding, never raised
+- [x] Owner names sanitised before becoming filenames
+- [x] Language pack table: manifest file, declared-name reader, dependency
       reader, export patterns, import patterns, extensions
-- [ ] Pack: TypeScript / JavaScript
-- [ ] Pack: Python
-- [ ] Pack: Go
-- [ ] `RetrievalChannel` protocol — ranked repos + per-repo justification
-- [ ] Existing lexical pass refactored into the first channel, no behaviour change
-- [ ] Test: cache round-trip, SHA invalidation, schema rebuild, concurrent writer
-- [ ] Test: `0600` enforcement
-- [ ] Test: per-language extraction, including a file that yields nothing
-- [ ] **Refactor-equivalence test**: channel-wrapped lexical == V1, all 18 cases
+- [x] Pack: TypeScript / JavaScript
+- [x] Pack: Python
+- [x] Pack: Go
+- [x] `RetrievalChannel` protocol — ranked repos + per-repo justification
+- [x] Competition ranking in the channel interface (ties share a rank)
+- [x] Existing lexical pass refactored into the first channel, no behaviour change
+- [x] Test: cache round-trip, SHA invalidation, schema rebuild, concurrent writer
+- [x] Test: `0600` enforcement, on the file and the directory
+- [x] Test: no nearest-SHA or latest-entry fallback exists
+- [x] Test: per-language extraction, including a file that yields nothing
+- [x] Test: a symbol appearing only in a comment or docstring is not indexed
+- [x] Test: manifest declared name differing from the directory name
+- [x] Test: both forms of Go's `require`
+- [x] **Refactor-equivalence test**: channel-wrapped lexical == V1, all 18 cases,
+      compared against a snapshot recorded *before* the refactor
+- [x] `docs/how-it-works.md`: the mechanism walkthrough
+- [x] 102 new tests; full suite 568 green; ruff clean
 
-**Exit:** `eval --offline` byte-identical to V2.2. A changed number here is a bug.
+**Exit met:** `eval --offline` byte-identical to V2.2 — same aggregates, same
+per-case ranks — and the golden snapshot matches field for field.
+
+### Findings from V2.3
+
+- **The equivalence check needed to be wider than the baseline.** The eval
+  baseline proves *ranking* did not move. It says nothing about which signals
+  were extracted, in what order they were searched, which exact lines matched,
+  or what context window each lead carries — all of which reach the model. A
+  snapshot of every observable field was recorded from the pre-refactor code
+  *before* anything was touched, so the test compares against real prior
+  behaviour rather than against itself.
+- **A real bug in the cache, caught by a test written for a lesser reason.**
+  Creating the tables stamps the current schema version, and the version check
+  originally ran afterwards — so a database whose version row had gone missing
+  would silently present as current and keep its incompatible rows. The version
+  is now read before any table is created.
+- **Go imports are paths, not name lists.** The first implementation tokenised
+  every import group, turning `"encoding/json"` into `encoding` and `json` —
+  inventing two names that are symbols in no repository, and discarding exactly
+  the path the dependency graph resolves edges on. Packs now declare whether a
+  captured import group is a list to split or a single literal name.
+- **The fixture organisation already exercises the hard manifest case.** The
+  conventions repository declares `@acme/contracts` while living in a directory
+  called `acme-contracts`, and the API repository depends on the declared name.
+  V2.4's edge resolves correctly through declared names and would find nothing
+  through directory names.
+
+---
 
 ---
 
