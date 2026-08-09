@@ -267,6 +267,7 @@ PRODUCTION_MODULES = (
     "panorama.cochange",
     "panorama.config",
     "panorama.dependencies",
+    "panorama.httpcontract",
     "panorama.symbols",
     "panorama.claude_runner",
     "panorama.languages",

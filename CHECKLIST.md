@@ -725,6 +725,75 @@ verify them live.
 
 ---
 
+## V2.12 — HTTP-contract channel (backlog `A3`) · **DONE**
+
+Not a planned milestone. `v2plan.md` ends at V2.11 and V2 is feature-complete;
+this is the top item of `BACKLOG.md` picked up by name, and it is recorded here
+in the same form so status stays in one place.
+
+- [x] Wire-token extraction: route segments, payload fields, payload values,
+      status codes — read identically from the diff and from sibling source
+- [x] Added/removed subtraction, so a reformat is not a contract change
+- [x] Import lines excluded — a module path is shaped exactly like a route
+- [x] Comments, documents and manifests contribute nothing
+- [x] **Eligibility gate**: only repositories that make an HTTP call, serve a
+      route or decode a response body can be ranked
+- [x] Claim ordering: an `endpoint` match always outranks a `payload` match
+- [x] **Discrimination guard**: a wire token named by *every* eligible
+      repository is discarded, and the discard is reported
+- [x] Surface index cached by `(repo, head_sha)` under its own kind, so it does
+      not invalidate the symbol index
+- [x] Wired into `active_channels`, on by default — unlike co-change, this one
+      is measured
+- [x] 39 new tests; ruff clean
+- [x] Constraint #2 extended to the new module
+- [x] **Additive property proven**: signals, searched signals and every lexical
+      lead are byte-identical to the recorded golden; only the fused ranking
+      moved, and only on the two intended cases
+- [x] Golden snapshot regenerated, with the change justified rather than rubber-stamped
+- [x] Measured: **recall@1 0.833 → 1.000**, outright recall@1 0.833 → 1.000,
+      MRR 0.917 → 1.000, recall@3 and file recall held at 1.000
+- [x] Measured: no case regressed; all four scorable negatives still zero leads
+- [ ] Live: `eval --live -k 3` re-measurement of `B3` — **not done**, needs the
+      real subscription
+
+**Exit met offline.** The live half of `B3` is outstanding.
+
+### Findings from V2.12
+
+- **The fix for A1 was a missing signal, not a missing knob.** V2.7 concluded
+  there was no tuning left and that the remaining headroom was in couplings
+  nothing declares. That turned out to be exactly right: fusion was not touched,
+  the constant is still 60 and still untuned, and the two stuck cases moved
+  because their targets gained a third channel's vote while the repository
+  beating them gained nothing.
+- **The eligibility gate is the entire mechanism.** Every candidate in the
+  status-code case contains the removed error code — the gateway reads it, the
+  shared library defines it, the conventions document describes it. Requiring
+  that a repository *speak HTTP* is what separates them, and it is a distinction
+  no amount of lexical matching can make. The shared library is excluded because
+  it makes no request; the conventions repository because it has no source at
+  all.
+- **The guard against non-discriminating tokens was found by a regression, not
+  by foresight.** The first working version pushed recall@1 to 1.000 while
+  quietly turning a cleanly-ranked case into a two-way tie: the organisation's
+  central path segment appears in every client it has, so matching it promoted
+  every HTTP-speaking repository at once. The ties-excluded metric is the only
+  thing that reported this, which is the second time it has earned its place.
+  The guard is parameter-free on purpose — "named by every eligible repository",
+  never "by more than some fraction", because a fraction is a number fitted to
+  the corpus it is then scored on.
+- **It contributes ranking, and on this corpus nothing else.** Every lead it
+  produces is deduplicated away as one the lexical pass already found, so the
+  claim "it shows the model places it would not otherwise have seen" is
+  unmeasured. Recorded as `A4` rather than implied.
+- **The corpus is saturated again.** Every offline retrieval metric now reads
+  1.000. The harness can still catch a regression and can no longer demonstrate
+  an improvement — the same position V2.1 reported, for the same reason, and the
+  argument for a larger corpus before any further retrieval work.
+
+---
+
 ## Standing rules for V2 (unchanged from V1 unless noted)
 
 - [ ] No fixture names, field names, or expected findings in production code

@@ -299,6 +299,21 @@
     "ranked_repos": [
       {
         "provenance": [
+          "lexical #1: shares 5 identifier(s) with the diff: /stats, active_links, generated_at, stats, total_links",
+          "httpcontract #1: speaks HTTP and names 1 route(s) this change moves: /stats"
+        ],
+        "repo": "acme-analytics",
+        "score": 0.032787,
+        "signals": [
+          "/stats",
+          "active_links",
+          "generated_at",
+          "stats",
+          "total_links"
+        ]
+      },
+      {
+        "provenance": [
           "lexical #2: shares 3 identifier(s) with the diff: /stats, stats, toISOString",
           "dependency #2: this repository depends on it (@acme/contracts), directly"
         ],
@@ -308,20 +323,6 @@
           "/stats",
           "stats",
           "toISOString"
-        ]
-      },
-      {
-        "provenance": [
-          "lexical #1: shares 5 identifier(s) with the diff: /stats, active_links, generated_at, stats, total_links"
-        ],
-        "repo": "acme-analytics",
-        "score": 0.016393,
-        "signals": [
-          "/stats",
-          "active_links",
-          "generated_at",
-          "stats",
-          "total_links"
         ]
       },
       {
@@ -449,10 +450,11 @@
     "ranked_repos": [
       {
         "provenance": [
-          "lexical #1: shares 1 identifier(s) with the diff: archived"
+          "lexical #1: shares 1 identifier(s) with the diff: archived",
+          "httpcontract #2: speaks HTTP and names 1 payload token(s) this change moves: archived"
         ],
         "repo": "acme-analytics",
-        "score": 0.016393,
+        "score": 0.032522,
         "signals": [
           "archived"
         ]
@@ -1036,6 +1038,22 @@
     "ranked_repos": [
       {
         "provenance": [
+          "lexical #1: shares 6 identifier(s) with the diff: available, code, link, message, not_found (+1 more)",
+          "httpcontract #2: speaks HTTP and names 1 payload token(s) this change moves: not_found"
+        ],
+        "repo": "acme-gateway",
+        "score": 0.032522,
+        "signals": [
+          "available",
+          "code",
+          "link",
+          "message",
+          "not_found",
+          "status"
+        ]
+      },
+      {
+        "provenance": [
           "lexical #3: shares 3 identifier(s) with the diff: code, message, not_found",
           "dependency #2: this repository depends on it (@acme/contracts), directly"
         ],
@@ -1045,21 +1063,6 @@
           "code",
           "message",
           "not_found"
-        ]
-      },
-      {
-        "provenance": [
-          "lexical #1: shares 6 identifier(s) with the diff: available, code, link, message, not_found (+1 more)"
-        ],
-        "repo": "acme-gateway",
-        "score": 0.016393,
-        "signals": [
-          "available",
-          "code",
-          "link",
-          "message",
-          "not_found",
-          "status"
         ]
       },
       {

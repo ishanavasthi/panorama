@@ -49,9 +49,15 @@ forbids that shortcut. The fixture now proves it rather than trusting it.
 
 **The Python and Go consumers have no manifest edge to anything.** A Go module
 cannot `require` an npm package. Their coupling to the API is the HTTP contract
-and nothing else. This keeps the dependency-graph channel honest: it will be
-silent on a third of the corpus, and the fusion step (V2.7) has to cope with a
-channel that says nothing rather than a channel that is always right.
+and nothing else. This keeps the dependency-graph channel honest: it is silent
+on a third of the corpus, and the fusion step (V2.7) has to cope with a channel
+that says nothing rather than a channel that is always right.
+
+This property has since done double duty and is now load-bearing twice over.
+These are the cases V2.12's HTTP-contract channel was built to answer, and they
+are the only cases that can tell whether it works. **Giving either consumer a
+manifest edge would silently delete the evidence for a whole channel** while
+looking like tidying up.
 
 **Each consumer consumes a *different slice* of the contract.** `acme-web` uses
 `url` and the shared formatter; `acme-analytics` uses `created_at`, the status
@@ -174,6 +180,15 @@ Stated so it is a known gap rather than a discovered one:
   needs a synthesised large org, which is that milestone's own test fixture.
 - **Adversarial content.** Prompt injection in repository content is covered by
   the boundary tests, not by the corpus.
+- **Headroom.** As of V2.12 every offline retrieval metric reads 1.000, so the
+  corpus can detect a regression and can no longer demonstrate an improvement.
+  That is the same saturation V2.1 found on the four inherited cases, and it has
+  the same consequence: the next retrieval change needs a larger or harder
+  corpus, or the live tier, before it can claim to have helped. The cases most
+  worth adding are the ones the current channels would find hardest — a payload
+  field whose name is an ordinary English word, a route segment that also reads
+  as a common identifier, and a helper duplicated across a naming-convention
+  boundary with no shared constant to give it away.
 
 ---
 

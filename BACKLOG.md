@@ -15,30 +15,42 @@ Status: `open` · `accepted` (understood, not worth fixing) · `done`
 
 ## A. Retrieval quality
 
-### A1 — Two contract-break cases rank #2 instead of #1 · `open`
+> **The offline corpus is saturated again.** With A3 closed, every retrieval
+> metric reads 1.000 — recall@1, outright recall@1, recall@3, MRR and file
+> recall — across all twelve positive cases, with zero leads on every negative
+> control. That is the same position V2.1 found itself in on the four inherited
+> cases, and it means the same thing: **the offline harness can now only detect
+> regressions, not improvements.** It remains a gate worth keeping and is no
+> longer evidence for any further retrieval change. Anything after this needs a
+> larger or harder corpus, or the live tier, before it can claim to have helped.
 
-`contract-break-removed-endpoint` and `contract-break-status-code` both put
-their labelled target at rank 2. Measured: recall@1 **0.833**, recall@3 1.000.
+### A1 — Two contract-break cases rank #2 instead of #1 · `done`
 
-**Why.** In both, the conventions repository is the lexical runner-up *and* a
-declared dependency of the pull request's repository, so it collects a vote from
-each of two channels while the true target collects one. Reciprocal rank fusion
-discards magnitude, so it cannot see that in one case the true target led
-lexically by 18.0 to 4.0 and in the other by almost nothing — **both look
-identical to it**.
+Fixed by **A3**, exactly as predicted, and without touching fusion at all.
 
-**Already tried.** The fusion constant was swept across the whole corpus:
-every value ≥ 1 gives byte-identical results, and 0 turns the two losses into
-*ties* (a perfect recall@1 describing a ranking that discriminates less — the
-reason the ties-excluded metric exists). Max-fusion instead of sum fixes these
-two and immediately un-fixes the convention case V2.4 existed for.
+`contract-break-removed-endpoint` and `contract-break-status-code` both now rank
+their labelled target **outright first**. Corpus-wide: recall@1 0.833 →
+**1.000**, outright recall@1 0.833 → **1.000**, MRR 0.917 → **1.000**.
 
-**What a real fix needs.** A way to express channel *confidence*, not just
-order. Every such mechanism needs a parameter, and the only data available to
-fit it is the corpus it would then be scored against. Options worth considering:
-a channel declaring its own rank *gaps* rather than dense ranks; or accepting a
-small number of principled, documented weights and validating them on a held-out
-split of a larger corpus. Related to **A3**.
+**Why it was open.** In both cases the conventions repository was the lexical
+runner-up *and* a declared dependency of the pull request's repository, so it
+collected a vote from each of two channels while the true target collected one.
+Reciprocal rank fusion discards magnitude, so it could not see that in one case
+the true target led lexically by 18.0 to 4.0.
+
+**Why the fix is not a tuning hack.** Nothing about fusion changed — the
+constant is still 60 and still untuned. The two targets each gained a *third*
+channel's vote because a fourth channel now sees the coupling they always had.
+The conventions repository gained nothing, because it has no source code and
+therefore speaks no HTTP. The tie broke because a real signal was added, not
+because a number was leaned on.
+
+**What was tried and rejected before.** Sweeping the fusion constant: every
+value ≥ 1 gives byte-identical results, and 0 turns the two losses into *ties*
+(a perfect recall@1 describing a ranking that discriminates less — the reason
+the ties-excluded metric exists). Max-fusion instead of sum fixes these two and
+immediately un-fixes the convention case V2.4 existed for. Both are recorded in
+`DECISIONS.md` under V2.7.
 
 ---
 
@@ -62,18 +74,52 @@ missed one. Needs a measured decision, not a hunch.
 
 ---
 
-### A3 — HTTP-contract couplings are invisible to both structural channels · `open`
+### A3 — HTTP-contract couplings are invisible to both structural channels · `done`
 
-A Python client and a Go gateway can each depend entirely on a TypeScript
-service and appear in no manifest and no import statement. Roughly **a third of
-the corpus** is that shape, and it is the root cause underneath A1: for those
-cases only the lexical channel speaks, so there is nothing to break the tie.
+Closed by a fourth live channel, `httpcontract`. It extracts the tokens that
+travel over the wire — route segments, payload field names, payload values,
+status codes — from the diff, and matches them against the same tokens in
+siblings that demonstrably **speak HTTP**: make a call, serve a route, or decode
+a response body.
 
-**What a fix needs.** Read route strings and response field names as a
-first-class signal — an HTTP-contract channel: extract route literals and JSON
-field names from the diff, match them against string literals and struct/type
-tags in siblings. This is the largest remaining piece of headroom in retrieval
-and is a *new channel*, not a tuning pass.
+Two filters are what stop it collapsing back into the lexical channel:
+
+- **Only string-literal and wire positions count.** An identifier spelled the
+  same is not a match.
+- **Only repositories that speak HTTP are eligible.** Defining an error-code
+  constant is not consuming a contract; the coupling belongs to whoever sends or
+  reads it. A documentation repository has no source and is never eligible.
+
+That second filter is the whole mechanism: on the corpus it is exactly what
+separates the gateway that *reads* an error code from the shared library that
+*defines* it and the conventions document that *describes* it.
+
+**Measured:** recall@1 0.833 → **1.000**, outright recall@1 0.833 → **1.000**,
+MRR 0.917 → **1.000**, recall@3 and file recall held at 1.000. No case
+regressed; all four negative controls still surface zero leads. Fixes **A1**.
+
+**One honest limit, now recorded as `A4`:** on this corpus the channel changes
+*ranking only* and contributes no new file-level leads, because every line it
+points at the lexical pass had already found.
+
+---
+
+### A4 — The HTTP channel adds no leads the lexical pass had not found · `open`
+
+Every hit the new channel produces on the corpus is deduplicated away as
+something the lexical pass already surfaced. Its measured value is entirely in
+the *ranking*, which is real and is what A1 needed — but the claim "it shows the
+model places it would not otherwise have seen" is **not** supported by any
+measurement.
+
+**Why that is expected here.** The corpus is small and its wire tokens are
+distinctive, so anything matching as a route or a field also matches as a bare
+string. The channel should separate from lexical exactly where lexical is
+weakest: a field name that is a common English word, a route segment that
+appears as an ordinary identifier in a dozen places.
+
+**Blocked on the same thing as C2:** a real organisation. Worth checking there
+before claiming lead-level value anywhere user-facing.
 
 ---
 
@@ -109,13 +155,22 @@ measure a change with any confidence.
 
 ---
 
-### B3 — `contract-break-status-code` passes 1 run in 3 · `open`
+### B3 — `contract-break-status-code` passes 1 run in 3 · `open, retrieval half fixed`
 
-The weakest single case, live and offline. Both structural channels are silent
-(it is an A3 case) and the lexical signal is genuinely ambiguous: the removed
-error code string appears in the consumer, the shared library *and* the
-conventions document. Fixed by A3, most likely — worth re-measuring after,
-rather than attacking directly.
+The weakest single case, live and offline.
+
+**Offline: fixed by A3.** It was the joint-weakest retrieval case, at rank 2.
+The HTTP channel now ranks the Go gateway — the repository that actually reads
+the removed error code — while leaving the shared library that merely defines it
+and the conventions document that describes it unranked. It is **outright rank
+1**, and the right repository is now what the model is handed first.
+
+**Live: not re-measured yet.** Retrieval putting the right repository first is a
+necessary condition, not a sufficient one. The difficulty this case was built
+for lives at the review tier: the model has to say the gateway *breaks* rather
+than that three repositories *mention* an error code. Needs
+`panorama eval --live -k 3` against the real subscription to know whether
+1-in-3 moved, and `k > 3` to say anything confident about a change that size.
 
 ---
 
@@ -167,8 +222,34 @@ coupling is a *mirrored response type* that no manifest records.
 
 **Bounded, not fixed:** the counts are printed on every run, `--all-repos`
 undoes it, and the cached symbol index makes the second review better targeted
-than the first. A real fix is A3 — a coupling signal that does not need a
-declaration.
+than the first.
+
+**A3 does not fix this, contrary to what this entry used to predict.** The HTTP
+channel finds undeclared couplings at *retrieval* time, but selection chooses
+what to clone **before** any sibling source exists to read. The channel needs a
+checkout; selection runs without one. On a cold cache nothing has changed, and
+the guarantee is still the honest one: the loss is reported, and `--all-repos`
+recovers it.
+
+**The available next step is `D4`.**
+
+---
+
+### D4 — Selection ignores the cached HTTP surface · `open`
+
+Selection already consults a **previous run's symbol index** to keep a
+repository whose coupling no manifest declares. The HTTP surface is cached the
+same way, keyed the same way, and is precisely a record of undeclared coupling —
+but selection does not read it.
+
+Wiring it in would make the second review of an organisation resistant to the
+exact failure D1 describes, for repositories whose only link is the wire. It was
+deliberately not done alongside A3: selection has its own documented guarantee
+and its own tests, and changing what gets cloned is a larger blast radius than
+adding a channel that only re-ranks what is already there.
+
+**Not blocked on anything.** Needs the selection tests extended with an
+HTTP-coupled repository that a tight budget would otherwise drop.
 
 ---
 
@@ -179,8 +260,10 @@ some recall, and the loss is safe in the direction that matters: a symbol not
 indexed is a lead not offered, never a citation invented.
 
 Tree-sitter becomes justified only if measurement shows extraction recall is the
-binding constraint — a measured upgrade, not a speculative one. It is not
-currently the binding constraint; A3 is.
+binding constraint — a measured upgrade, not a speculative one. It is still not
+the binding constraint. With A3 closed and offline retrieval saturated, there is
+no longer a *measurable* binding constraint at all on this corpus, which is
+itself the finding: see the note on the corpus at the top of section A.
 
 ---
 

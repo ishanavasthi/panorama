@@ -36,10 +36,12 @@ deterministic and needs no subscription, so it runs as a regression gate.
 
 **2. Retrieval reads structure, not just words.** V1 had one lexical channel and
 could only find links that shared *vocabulary*. V2 adds a dependency graph
-(resolved package-name to package-name) and a symbol index (who actually imports
-what), fused by reciprocal rank. That closed the case V1 recorded as its
-weakness: a convention violated by an *absence*, where the diff and the document
-it breaks share no word at all.
+(resolved package-name to package-name), a symbol index (who actually imports
+what), and an HTTP-contract channel (who calls the same routes and reads the
+same payloads), fused by reciprocal rank. Between them they closed both cases V1
+and V2 recorded as weaknesses: a convention violated by an *absence*, where the
+diff and the document it breaks share no word at all, and a service consumed
+over HTTP by a client that declares nothing anywhere.
 
 **3. It reviews without being asked.** `panorama watch` polls, reviews what
 moved, and is dry-run by default — posting needs an explicit flag *and* an
@@ -135,27 +137,34 @@ uv run panorama eval --json          # per-case detail
 
 Where it stands on the 18-case corpus, across the milestones that built it:
 
-| Metric | Baseline | + dependency graph | + symbol index |
-|---|---:|---:|---:|
-| recall@1 | 0.750 | 0.750 | **0.833** |
-| recall@1, ties excluded | 0.750 | 0.750 | **0.833** |
-| recall@3 | 0.917 | **1.000** | 1.000 |
-| MRR | 0.833 | 0.875 | **0.917** |
-| file recall | 1.000 | 1.000 | 1.000 |
+| Metric | Baseline | + dependency graph | + symbol index | + HTTP contract |
+|---|---:|---:|---:|---:|
+| recall@1 | 0.750 | 0.750 | 0.833 | **1.000** |
+| recall@1, ties excluded | 0.750 | 0.750 | 0.833 | **1.000** |
+| recall@3 | 0.917 | **1.000** | 1.000 | 1.000 |
+| MRR | 0.833 | 0.875 | 0.917 | **1.000** |
+| file recall | 1.000 | 1.000 | 1.000 | 1.000 |
 
-Every positive case has its target repository in the top three; ten of twelve
-have it outright first; no negative control surfaces a single lead.
+Every positive case ranks its target repository outright first — no ties
+anywhere — and no negative control surfaces a single lead.
 
-Two things this table does *not* say, both recorded in `DECISIONS.md`:
+Three things this table does *not* say, all recorded in `DECISIONS.md`:
 
-- Two contract-break cases sit at rank 2 rather than 1. Their consumers reach
-  the changed service over HTTP, so nothing is declared for the structural
-  channels to find, and rank fusion's blindness to magnitude lets a repository
-  ranked second by two channels edge past a target ranked first by one.
-- The fusion constant was swept across the whole corpus and every value above
-  zero gives identical results. Zero would reach a perfect recall@1 — by turning
-  those two losses into *ties*, which is worse retrieval reported with a better
-  number. It was rejected for that reason.
+- **The last column is a new signal, not a tuned one.** The two cases that had
+  been stuck at rank 2 reach the changed service over HTTP, so nothing was
+  declared for the structural channels to find. Fusion was not touched to fix
+  them: the constant is still 60 and still untuned, and their targets moved
+  because a fourth channel gave them a vote the repository beating them could
+  not earn.
+- **The fusion constant is inert.** Swept across the whole corpus, every value
+  above zero gives identical results. Zero would have reached a perfect recall@1
+  back at the symbol-index column — by turning those two losses into *ties*,
+  which is worse retrieval reported with a better number. It was rejected for
+  that reason, and the ties-excluded row is what makes the difference visible.
+- **A perfect score means this corpus is finished as evidence.** It can still
+  catch a regression; it can no longer demonstrate an improvement. Any further
+  retrieval work needs a larger or harder corpus, or the live tier, before it
+  can claim to have helped.
 
 ## Evaluation against the model
 
@@ -464,7 +473,7 @@ flowchart LR
         direction LR
         INTAKE["intake<br/>PR metadata + diff<br/>normalized PullRequest"]
         WORKSPACE["workspace<br/>manifests read without cloning<br/>top-N cloned blobless, locked<br/>PR repo pinned at head SHA"]
-        RETRIEVE["retrieve — 3 channels, rank-fused<br/>lexical · dependency graph · symbol index<br/>+ org map + convention docs"]
+        RETRIEVE["retrieve — 4 channels, rank-fused<br/>lexical · dependency graph · symbol index · HTTP contract<br/>+ org map + convention docs"]
         REVIEW["review<br/>local claude CLI<br/>Read/Grep/Glob only, sandboxed<br/>JSON-schema output"]
         VALIDATE["validate<br/>repo/path/line/SHA checks<br/>foreign-evidence + secret screen<br/>discard unsupported findings"]
         SUPPRESS["suppress<br/>drop findings already dismissed<br/>and count them"]
@@ -524,11 +533,11 @@ The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
   retrieval missed) or letting it roam unverified (free to invent citations), it
   does both — and every citation is re-checked against the real files, with
   failures **discarded, never downgraded**.
-- **Explainable retrieval, not embeddings.** Three channels — shared vocabulary,
-  declared dependencies, and imported/exported symbols — each of which can say
-  *why* it surfaced a repository, fused by rank rather than by a weighted sum
-  whose weights could only be fitted on the corpus they are then scored against.
-  No vector index to build, drift, or explain away.
+- **Explainable retrieval, not embeddings.** Four channels — shared vocabulary,
+  declared dependencies, imported/exported symbols, and shared HTTP contracts —
+  each of which can say *why* it surfaced a repository, fused by rank rather than
+  by a weighted sum whose weights could only be fitted on the corpus they are
+  then scored against. No vector index to build, drift, or explain away.
 - **Findings cite locations; they never quote code.** Reference-only output is
   safe to post on a repo whose readers can't see the cited repo's source.
 - **Persistent state can only make a review slower, never wrong.** The cache is
@@ -542,12 +551,18 @@ Measured or accepted, so they can be stated rather than discovered. Each has an
 id in `BACKLOG.md` with the evidence, what has already been tried, and what a
 real fix would involve:
 
-- **Two contract-break cases rank their target second, not first.** Their
-  consumers reach the changed service over HTTP, so no manifest and no import
-  statement records the coupling, and both structural channels are silent. Rank
-  fusion is blind to magnitude, so a repository ranked second by two channels
-  edges past a target ranked first by one. Understood, recorded, and not fixable
-  by tuning — see `DECISIONS.md`.
+- **The offline corpus is saturated, so it can no longer show an improvement.**
+  Every retrieval metric reads 1.000. It remains a per-commit regression gate and
+  has stopped being evidence for any further retrieval change — the same position
+  the four inherited V1 cases were in before the corpus was expanded (`A`).
+- **The HTTP-contract channel is measured on ranking only.** Every lead it
+  produces on this corpus turns out to be one the lexical pass had already found,
+  so its value in *pointing somewhere new* is unmeasured rather than
+  demonstrated (`A4`).
+- **A repository speaking HTTP through an unrecognised library is invisible to
+  that channel**, which recognises a fixed list of common client, server and
+  decoding idioms. Like every other limit here, it costs a lead never offered
+  rather than a citation invented.
 - **Cross-language duplicate detection barely works.** `format_timestamp` and
   `formatTimestamp` are different strings and no ranking makes them one. The one
   case that tests it is winnable only because a shared constant is spelled
@@ -581,9 +596,16 @@ real fix would involve:
 
 ## Future work
 
-- **Read HTTP contracts as a first-class signal.** Route strings and response
-  field names are the coupling both structural channels miss, and they are the
-  remaining headroom in retrieval.
+- **A larger, harder corpus.** Retrieval now scores 1.000 on every offline
+  metric, which means the corpus has stopped being able to tell anyone whether
+  the next change helps. This is the prerequisite for all the retrieval work
+  below, not a parallel task.
+- **Normalise identifiers across naming conventions**, so `format_timestamp` and
+  `formatTimestamp` can match. Cheap to try; the risk is false positives, which
+  is why it needs a corpus that can measure it first.
+- **Let selection read the cached HTTP surface** the way it already reads the
+  cached symbol index, so the second review of a large organisation keeps a
+  repository whose only coupling is the wire.
 - **Inline line-level review comments**, deferred because a review with inline
   comments is not idempotent the way a single edited summary comment is.
 - **Tree-sitter instead of regex**, if measurement ever shows extraction recall

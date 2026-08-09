@@ -112,7 +112,11 @@ panorama review <PR ref> [--post]
                   A lexical    diff signals -> sibling git-grep hits
                   B deps       manifest declared-name graph
                   C symbols    cached export/import index per repo+SHA
-                  D co-change  git-history coupling prior (stretch)
+                  D co-change  git-history coupling prior (built, ships OFF)
+                  E http       wire tokens (route segments, payload fields and
+                               values, status codes) matched only against
+                               siblings that demonstrably speak HTTP;
+                               cached per repo+SHA
                 + org map + convention docs
   review     -> claude -p, read/search only, JSON schema output -> Review
   validate   -> schema + repo/path/line/SHA checks -> discard unsupported findings
@@ -161,6 +165,12 @@ panorama suppressions list | clear <owner>
 comments (dropped per the plan's own drop order, in favour of fingerprints and
 suppression in the same milestone) and the two live `watch` checks, which need
 `demo --github` against a real account and so wait for the maintainer.
+
+Work after V2.11 comes from `BACKLOG.md` by id rather than from `v2plan.md`,
+which ends at V2.11. It is still recorded in `CHECKLIST.md` and `DECISIONS.md`
+in the same form, so status and reasoning stay in one place each. The HTTP
+contract channel (`A3`, closing `A1`) is the first of these and shipped as
+V2.12.
 
 `doctor` reports actionable setup failures; it must not inspect, request, or
 configure Anthropic API credentials. `demo --github` requires confirmation
@@ -217,8 +227,12 @@ orientation.
 Three properties are load-bearing and must not be "tidied up":
 
 - The Python and Go consumers have **no manifest edge** to anything. Their
-  coupling is the HTTP contract, so the dependency-graph channel is silent on a
-  third of the corpus — which is the condition fusion has to survive.
+  coupling is the HTTP contract, so the dependency-graph *and* symbol channels
+  are silent on a third of the corpus — which is the condition fusion has to
+  survive, and the condition channel E was built to answer. Both facts have to
+  stay true: giving those consumers a manifest edge would quietly delete the
+  case that justifies channel E, and channel E's own silence when a repository
+  speaks no HTTP is what keeps it from being a second lexical pass.
 - `acme-contracts` **declares a package name that differs from its directory
   name**, so resolving dependency edges by matching directory names fails a
   test instead of passing one.

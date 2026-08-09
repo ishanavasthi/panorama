@@ -504,12 +504,14 @@ def active_channels(
     behind by an earlier run is not a measurement.
     """
     from panorama.dependencies import DependencyChannel
+    from panorama.httpcontract import HTTPContractChannel
     from panorama.symbols import SymbolChannel
 
     channels: list[RetrievalChannel] = [
         LexicalChannel(),
         DependencyChannel(),
         SymbolChannel(cache),
+        HTTPContractChannel(cache),
     ]
 
     unknown = sorted(set(experimental) - set(EXPERIMENTAL_CHANNELS))

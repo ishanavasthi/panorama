@@ -1843,3 +1843,148 @@ contents — because the next instance of this will not be a version bump.
 It is also the clearest argument for that exit criterion existing at all. A test
 suite proves the code does what the tests say. Only running the documented
 walkthrough on a clean machine proves the documentation is true.
+
+---
+
+## V2.12 — the channel that reads the wire
+
+Not a planned milestone. `v2plan.md` ends at V2.11, and V2 was feature-complete
+when it landed. This is the top open item in `BACKLOG.md` — `A3` — picked up by
+name, and it closes `A1` with it.
+
+### What V2.7 predicted, and whether it held
+
+V2.7 ended by stating where the remaining headroom was, and it is worth quoting
+against the result rather than paraphrasing it:
+
+> So the remaining headroom in retrieval is not in fusion. It is in the two
+> cases where both structural channels are silent because the coupling is an
+> HTTP contract that nothing declares — and closing that would mean reading
+> route strings and response shapes as a first-class signal, which is a
+> different design, not a tuning pass.
+
+That is exactly what happened. **Fusion was not touched.** The constant is still
+60, still untuned, and the two stuck cases moved because a fourth channel gave
+their targets a third vote while giving the repository that had been beating
+them nothing at all.
+
+| Metric | V2.7 | V2.12 |
+|---|---:|---:|
+| recall@1 | 0.833 | **1.000** |
+| outright recall@1 (ties excluded) | 0.833 | **1.000** |
+| recall@3 | 1.000 | 1.000 |
+| MRR | 0.917 | **1.000** |
+| file recall | 1.000 | 1.000 |
+| leads on negative controls | 0 | 0 |
+
+### The decision: what makes this a channel and not a second lexical pass
+
+The risk with a channel built to match strings is that it re-votes for whatever
+lexical matching already found, improving every number while adding no
+information. Two filters are what prevent that, and they are the design.
+
+**Only wire positions count.** A route segment has to come out of a quoted path,
+a payload value out of a quoted literal, a field out of an object key, an
+interface member, a struct tag or a dictionary subscript. An identifier that
+merely happens to be spelled the same is not a match.
+
+**Only repositories that speak HTTP are eligible.** A repository qualifies when
+some source file of its own makes a request, serves a route, or decodes a
+response body. This is the part that does the work, and the status-code case
+shows why: *every* candidate contains the removed error code. The gateway reads
+it, the shared library defines it, the conventions document describes it, and
+lexical matching sees three repositories that all contain the same string. But
+defining an error code is not consuming a contract — the coupling belongs to
+whoever sends or reads it. The shared library is excluded because it never makes
+a request. The conventions repository is excluded because it has no source code
+at all.
+
+That is a distinction no amount of ranking over shared vocabulary can make, and
+it is the reason those two cases sat at rank 2 for four milestones.
+
+### The guard that a regression found
+
+The first working version reached recall@1 1.000 and simultaneously broke a case
+that had never been broken: a cleanly-ranked cross-repository conflict became a
+two-way tie. The cause was the organisation's central path segment, which
+appears in every client the organisation has. Matching it identifies nobody, and
+promoting every HTTP-speaking repository at once is the same as ranking none of
+them.
+
+**Only the ties-excluded metric reported this.** Plain recall@1 went up. That is
+the second time that metric has caught something a headline number hid, and both
+times the thing it caught was a ranking becoming *less* discriminating while
+looking better.
+
+The fix is a discrimination guard: a wire token named by **every** eligible
+repository is discarded, and the report says which tokens were discarded and
+why. It is deliberately parameter-free — "named by every eligible repository",
+never "by more than some fraction" — because the moment it is a fraction it is a
+number fitted to the corpus it is then scored against. The same argument the
+co-change channel's density guard makes, reused rather than reinvented.
+
+The cost is real and is stated rather than hidden: a change that genuinely
+breaks *every* HTTP consumer in the organisation has its broadest token
+discarded, so this channel is quietest exactly when a change is most sweeping.
+That case is the one lexical matching already handles well — the token is
+everywhere, so everything surfaces — and this channel exists for the
+discriminating case lexical matching cannot resolve.
+
+### Proving it was additive rather than trusting that it was
+
+`channels.py` requires that adding a channel not change any other channel's
+output, because that is what lets the harness attribute a change to its cause.
+The recorded golden snapshot covers every observable field of retrieval — which
+signals were extracted, in what order they were searched, which lines matched,
+what window each lead carries — so it was compared field by field before being
+regenerated:
+
+- extracted signals: **byte-identical** on all 18 cases
+- searched signals: **byte-identical** on all 18 cases
+- lexical leads: **byte-identical**, in order, on all 18 cases
+- fused ranking: changed on **exactly two** cases, both toward the labelled target
+
+Regenerating that golden to make a failing test pass is the one move that makes
+it worthless, so it was regenerated only after that comparison, and this is the
+justification.
+
+### What it costs
+
+The channel reads every source file of every sibling, which is the same walk the
+symbol index does — so a cold review now makes that walk twice. Measured over the
+whole corpus, cold, with no cache: **10.21s for three channels, 10.94s for four**,
+about 7%. Warm it reads no files at all, like the symbol index, and it is cached
+under its own kind so neither index invalidates the other.
+
+Merging the two walks would remove the duplication, and it was not done. The rule
+in `channels.py` is that a channel may not depend on another having run, and while
+a shared file-reading layer would not technically break that, it would put the two
+structural channels in one code path for a 7% saving that the cache already
+removes on every run after the first.
+
+### Two things this did not buy
+
+**It contributes ranking, and on this corpus nothing else.** Every lead the
+channel produces is deduplicated away as one the lexical pass had already found.
+The ranking gain is real and measured; the claim that it *shows the model places
+it would not otherwise have seen* is not supported by anything here, and is
+recorded as an open item rather than implied. It should separate from lexical
+exactly where lexical is weakest — a field name that is a common English word, a
+route segment that also reads as an ordinary identifier — and this corpus has
+neither.
+
+**It does not fix the selection recall loss.** The backlog predicted it would.
+It does not, for a reason worth writing down: the channel needs a checkout to
+read, and selection decides what to clone *before* any sibling source exists.
+Wiring the cached HTTP surface into selection the way the symbol index already
+is would help on a warm cache, and is recorded as its own item rather than
+quietly assumed.
+
+### The corpus is saturated, again
+
+Every offline retrieval metric now reads 1.000. That is the position V2.1
+reported on the four inherited cases, and it means the same thing: **the offline
+harness can now only detect regressions, not improvements.** It stays a
+per-commit gate, and it has stopped being evidence for any further retrieval
+change. Anything after this needs a larger or harder corpus, or the live tier,
+before it can claim to have helped anything.

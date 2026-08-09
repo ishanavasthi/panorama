@@ -164,6 +164,51 @@ Building this index means reading every source file in every sibling, which is
 the most expensive thing retrieval does, so it is cached per repository at a
 specific commit.
 
+**The HTTP-contract channel** (live) exists because the two channels above can
+only see relationships somebody wrote down, and the coupling that dominates a
+service organisation is written down nowhere. A Python client and a Go gateway
+can each depend utterly on a TypeScript API and appear in no manifest and no
+import statement, because the only thing joining them is a request and the JSON
+that comes back.
+
+So this one reads the wire. It pulls four kinds of token out of the diff —
+**route segments** (the static parts of a path literal, so `"/links/:id"` and
+`base + "/links/" + code` agree), **payload fields** (object keys, response-type
+members, `json:"..."` struct tags, dictionary subscripts), **payload values**
+(the lowercase wordless literals error codes are made of) and **status codes** —
+and looks for the same tokens in the siblings. A token present on both sides of
+the diff is discarded, so a reformat is not a contract change.
+
+Two filters are what stop it from being the lexical channel wearing a different
+name:
+
+- **Only wire positions count.** A route segment must come from a quoted path, a
+  value from a quoted literal, a field from a key or a tag. An identifier that
+  happens to be spelled the same is not a match.
+- **Only repositories that speak HTTP are eligible** — meaning some source file
+  of their own makes a request, serves a route, or decodes a response body.
+
+The second filter is the one that does the work. On the corpus, a change to an
+error code has three candidates that all contain the removed string: the gateway
+that *reads* it, the shared library that *defines* it, and the conventions
+document that *describes* it. Lexical matching sees three repositories
+containing one string. But defining an error code is not consuming a contract —
+the coupling belongs to whoever sends or reads it. The library is excluded
+because it never makes a request; the conventions repository because it has no
+source code at all.
+
+It makes two claims in a fixed order: naming a **route** the change moves
+outranks naming a **payload** token, because the endpoint is the strongest thing
+on the wire.
+
+One guard is worth knowing about. A token named by *every* eligible repository
+is discarded as non-discriminating, and the report says so. The organisation's
+central resource appears in every client it has, and matching it promotes
+everything at once, which is the same as ranking nothing. The cost is that a
+change breaking *every* consumer has its broadest token dropped — so this channel
+is quietest exactly when a change is most sweeping. That is the case lexical
+matching already handles well, since the token is then everywhere.
+
 **The co-change channel** exists but ships **disabled**. It reads history rather
 than the present, on the theory that repositories repeatedly changed together are
 coupled in ways nobody wrote down. Two signals: a shared ticket key appearing in
@@ -186,16 +231,23 @@ a great deal.
 
 ### What the structural channels cannot see
 
-Both of them can only see relationships somebody wrote down. A Python client and
-a Go gateway can each depend utterly on a TypeScript service and appear in no
-manifest and no import statement anywhere, because the coupling is an HTTP
-contract — a URL string on one side matching a route declaration on the other.
-For those, both structural channels are silent and lexical matching is the only
-thing that speaks.
+The dependency graph and the symbol index can only see relationships somebody
+wrote down in a manifest or an import. Roughly a third of the evaluation corpus
+is built so that they cannot: a Python client and a Go gateway that depend
+utterly on a TypeScript service and appear in neither. Building a fixture
+organisation where every dependency is declared would have made both channels
+look considerably better than they deserve.
 
-That is roughly a third of the evaluation corpus, deliberately. Building a
-fixture organisation where every dependency is declared would have made every
-structural channel look considerably better than it deserves.
+For four milestones those cases had only lexical matching to speak for them, and
+two of them consequently ranked their target second. The HTTP-contract channel
+was added to answer exactly that shape, and it did — but its own blindness is
+the same kind of thing and worth stating in the same breath. It recognises HTTP
+through a fixed list of common client, server and decoding idioms, so a
+repository reaching the network through a library that list does not name is
+invisible to it.
+
+Every one of these limits costs recall in the same direction: a coupling not
+seen is a lead not offered, never a citation invented.
 
 ### Why rankings are fused rather than summed
 
@@ -213,14 +265,14 @@ symbol index".
 The trade-off is that fusion discards *magnitude*. A channel that is
 overwhelmingly certain about its top result cannot say so, so **two second
 places outweigh one first place** regardless of how far ahead that first place
-was. This is not hypothetical: it is measured on the corpus, where two cases
-have their true target displaced by a repository that two channels each rank
-second.
+was. This was not hypothetical: for four milestones two cases had their true
+target displaced by a repository that two channels each ranked second, even
+though in one of them the true target led lexically by 18.0 to 4.0.
 
 Sweeping the constant across the whole corpus showed something worth knowing:
 **every value above zero produces identical results.** The standard value is
 calibrated for many systems ranking thousands of documents, where damping the
-influence of top ranks is the point. Here three channels rank a handful of
+influence of top ranks is the point. Here a handful of channels rank a handful of
 repositories, so the gap between first and third is a couple of percent while one
 extra channel voting at all doubles a score. Fusion at this scale is therefore
 close to pure vote counting — a structural property of the method, not a tuning
@@ -232,6 +284,14 @@ become ties and recall@1 reaches a perfect score. That is a better number
 describing a ranking that discriminates *less*, reported using the one metric
 blind to the difference — which is precisely what the ties-excluded metric exists
 to catch.
+
+Both cases now rank first, and **the constant was never touched**. What changed
+is that a fourth channel sees the coupling they always had, so their targets
+gained a third vote while the repository beating them gained none. That is the
+distinction worth carrying: the fix for "two weak agreements beat one strong
+conviction" was a missing signal, not a better weighting of the signals already
+present. Fusion still discards magnitude, and would still produce the same
+displacement given the same inputs.
 
 ### Silence is a legal answer
 
@@ -267,16 +327,25 @@ tried.
 
 ### What retrieval currently achieves
 
-On the labelled corpus, **every** positive case has its target repository inside
-the top three, and ten of twelve have it outright first. The two hardest cases —
-a convention violated by an absence, and the case that had merely *tied* for
-first since V1 — both rank their target first.
+On the labelled corpus, **every** positive case ranks its target repository
+outright first — no ties anywhere — and every negative control surfaces zero
+leads. recall@1, outright recall@1, recall@3, MRR and file recall all read
+1.000.
 
-The two that sit second are the ones where every structural channel is silent:
-their consumers reach the changed service over HTTP, so nothing is declared for
-the graph or the index to find, and rank fusion's blindness to magnitude lets a
-repository ranked second by two channels edge past a target ranked first by one.
-That is understood, recorded, and the concrete input to the tuning pass.
+The two cases that used to sit second were the ones where every structural
+channel was silent, because their consumers reach the changed service over HTTP
+and nothing is declared for the graph or the index to find. They were fixed by
+adding the signal that was missing rather than by adjusting fusion: the constant
+is still 60 and still untuned, and their targets moved because a fourth channel
+gave them a vote the repository beating them could not earn.
+
+One thing that follows from a perfect score, and it is not good news. **A
+saturated corpus can detect a regression and cannot demonstrate an
+improvement.** The harness is still worth running on every commit for the first
+reason, and it has stopped being evidence for the second — the same position the
+four inherited V1 cases were in before the corpus was expanded. Any further
+retrieval work needs a larger or harder corpus, or the live tier, before it can
+claim to have helped.
 
 The numbers are re-measured on every commit, and a drop nobody explains does not
 land.
