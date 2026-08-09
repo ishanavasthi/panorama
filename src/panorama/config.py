@@ -25,6 +25,14 @@ RUN_ARTIFACT_ROOT = Path(".panorama") / "runs"
 #: committed (no nested `.git` reaches the outer repo), relative to the cwd.
 DEMO_ORG_ROOT = Path(".panorama") / "demo-org"
 
+#: Labelled evaluation cases and the recorded retrieval baseline. These are
+#: checked in (unlike everything under `.panorama/`) because they are the
+#: ground truth quality is measured against, and a baseline nobody can see is
+#: not a baseline. Deliberately *outside* the installed package: case data
+#: names fixture repositories, and production code may not (constraint #2).
+EVAL_CASES_ROOT = Path("evals") / "cases"
+EVAL_BASELINE_PATH = Path("evals") / "baseline.json"
+
 _DIR_MODE = stat.S_IRWXU  # 0700: read/write/execute for owner only
 
 

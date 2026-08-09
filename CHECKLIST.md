@@ -12,23 +12,54 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped (with rea
 
 ---
 
-## V2.1 — Evaluation harness and baseline
+## V2.1 — Evaluation harness and baseline · **DONE**
 
-- [ ] `evals/cases/*.yaml` schema: case id, repo, base, head, category, target
-      repos, target files, `expect_finding: true|false`, notes
-- [ ] Pydantic model + loader with validation errors that name the case file
-- [ ] Scorer: recall@1, recall@3, MRR, file-level hit recall
-- [ ] Scorer: review-level — category match, evidence-repo, evidence-file,
-      verdict, discard rate, false-positive rate on negatives
-- [ ] `panorama eval --offline` — retrieval only, no `claude`, no network
-- [ ] `panorama eval --live -k N` — full pipeline, flake rate across runs
-- [ ] Report renderer (table + JSON), `--json` output
-- [ ] Unit tests: ties, empty ranking, multi-target case, missing target repo
-- [ ] Golden test: report renders identically for fixed input
-- [ ] Test: `--offline` invokes neither `claude` nor the network
-- [ ] **Baseline recorded** in `evals/baseline.json` for V1 retrieval, 4 cases
+- [x] `evals/cases/*.toml` schema: case id, repo, base, head, category, target
+      repos, target files, `expect_finding`, `forbid_repos`, `expect_no_hits`
+      — *TOML, not YAML: `tomllib` is stdlib at the 3.11 floor, so ground truth
+      costs no dependency*
+- [x] Pydantic model + loader with validation errors that name the case file
+- [x] Scorer: recall@1, recall@3, MRR, file-level hit recall
+- [x] Scorer: **outright recall@1** (rank 1 with no tie) — added after the
+      baseline came back saturated; see the finding below
+- [x] Scorer: review-level — category match, evidence-repo, evidence-file,
+      verdict, discard rate, false-positive rate on negatives, flake
+- [x] `panorama eval` — retrieval only, no `claude`, no network
+- [x] `panorama eval --live -k N` — full pipeline, flake rate across runs
+      *(implemented and unit-tested; not yet exercised against a real
+      subscription — that happens at V2.7)*
+- [x] Report renderer (table + JSON), `--json` output
+- [x] Baseline compare: per-case **and** aggregate, `--check/--no-check`,
+      exit 4 on regression
+- [x] Unit tests: ties, empty ranking, multi-target case, missing target repo
+- [x] Golden test: report renders identically for fixed input
+- [x] Test: `--offline` invokes neither `claude` nor the network
+- [x] Test: labels point at repos and files that actually exist
+- [x] **Baseline recorded** in `evals/baseline.json` for V1 retrieval, 4 cases
+- [x] 53 new tests; full suite 424 green; ruff clean
 
-**Exit:** baseline committed. Every later milestone reports its delta.
+**Exit met:** baseline committed. Every later milestone reports its delta.
+
+### Findings from V2.1
+
+- **The V1 corpus is saturated and cannot measure improvement.** recall@1,
+  recall@3, MRR and file recall all came back at **1.000** on the four
+  inherited cases. Building any retrieval channel against this corpus would
+  have produced no evidence either way. This is the clearest possible
+  vindication of doing measurement before mechanism — and it makes **V2.2 a
+  hard prerequisite**, not a nice-to-have.
+- **Outright recall@1 = 0.667 is the one number with room to move.** The
+  convention case ranks its target first only in a **three-way tie**, exactly
+  as V1's S4 predicted. Competition ranking surfaces that instead of letting
+  alphabetical order resolve it; a naive index-based scorer would have reported
+  a clean rank 1 and hidden the weakness. This is V2.4's target.
+- **One of four cases asserts nothing checkable offline.** The docs-cleanup
+  negative is reported as *not retrieval-scorable* rather than counted as a
+  pass, because retrieval always ranks something. The offline gate therefore
+  covers 3 of 4 inherited cases, and the report says so on every run.
+- **Fixed a latent bootstrap bug:** fixture-repo enumeration did not skip
+  dot-directories, so a stray `.panorama/` in the data tree presented as a
+  broken fixture repo with a confusing error.
 
 ---
 

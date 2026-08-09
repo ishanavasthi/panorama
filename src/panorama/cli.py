@@ -12,6 +12,7 @@ import typer
 
 from panorama import __version__
 from panorama.claude_runner import ClaudeRunner
+from panorama.config import EVAL_BASELINE_PATH, EVAL_CASES_ROOT
 from panorama.delivery import (
     PRCommentPoster,
     assert_postable,
@@ -19,7 +20,19 @@ from panorama.delivery import (
 )
 from panorama.demo import DemoSeeder, demo_repo_names
 from panorama.doctor import render_report, run_doctor
-from panorama.errors import IntakeError, PanoramaError
+from panorama.errors import EXIT_VALIDATION_ERROR, IntakeError, PanoramaError
+from panorama.evaluation import (
+    aggregate_retrieval,
+    aggregate_review,
+    baseline_object,
+    compare_to_baseline,
+    load_cases,
+    render_live_report,
+    render_offline_report,
+    run_live,
+    run_offline,
+)
+from panorama.evaluation.report import load_baseline
 from panorama.fixtures import bootstrap as bootstrap_fixtures
 from panorama.intake import (
     GitHubPullRequestSource,
@@ -313,6 +326,126 @@ def demo(
         typer.echo(f"  {result.owner}/{pr.repo} [{pr.branch}]{suffix}")
     typer.echo("")
     typer.echo("Review one with:  panorama review <owner>/<repo>#<number> [--post]")
+
+
+@app.command()
+def eval(  # noqa: A001 - the command really is called `eval`
+    live: bool = typer.Option(
+        False,
+        "--live",
+        help="Run the full pipeline against the real subscription (opt-in, slow).",
+    ),
+    runs: int = typer.Option(
+        3, "--runs", "-k", min=1, help="Runs per case in --live mode (default 3)."
+    ),
+    case: list[str] = typer.Option(
+        None, "--case", help="Score only these case ids (repeatable)."
+    ),
+    cases_dir: Path = typer.Option(
+        EVAL_CASES_ROOT, "--cases", help="Directory of labelled case files."
+    ),
+    baseline_path: Path = typer.Option(
+        EVAL_BASELINE_PATH, "--baseline", help="Baseline file to compare against."
+    ),
+    write_baseline: bool = typer.Option(
+        False, "--write-baseline", help="Record this run as the new baseline."
+    ),
+    check: bool = typer.Option(
+        True,
+        "--check/--no-check",
+        help="Exit non-zero on a regression against the baseline.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Emit scores as JSON."),
+) -> None:
+    """Score retrieval (and optionally review) against the labelled corpus.
+
+    Offline by default: retrieval only, fully deterministic, no subscription and
+    no network — so it can gate every commit. `--live` adds the model half and
+    is never part of automated CI.
+    """
+    try:
+        cases = load_cases(cases_dir, only=list(case) if case else None)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    if live:
+        scores, failures = run_live(cases, runs=runs)
+        aggregate = aggregate_review(scores)
+        if json_output:
+            import json as _json
+            from dataclasses import asdict
+
+            typer.echo(
+                _json.dumps(
+                    {
+                        "mode": "live",
+                        "aggregate": asdict(aggregate),
+                        "cases": [
+                            {
+                                "id": s.case_id,
+                                "expect_finding": s.expect_finding,
+                                "pass_rate": s.pass_rate,
+                                "flaky": s.flaky,
+                                "runs": [asdict(r) for r in s.runs],
+                            }
+                            for s in scores
+                        ],
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            typer.echo(render_live_report(scores, aggregate, failures=failures))
+        # A case that could not run is an environment failure, not a bad score.
+        raise typer.Exit(EXIT_VALIDATION_ERROR if failures else 0)
+
+    scores, failures = run_offline(cases)
+    aggregate = aggregate_retrieval(scores)
+
+    baseline = load_baseline(baseline_path)
+    regressions: list[str] = []
+    notes: list[str] = []
+    if baseline is not None:
+        regressions, notes = compare_to_baseline(baseline, aggregate, scores)
+
+    if json_output:
+        import json as _json
+
+        typer.echo(
+            _json.dumps(
+                {
+                    "mode": "offline",
+                    **baseline_object(aggregate, scores),
+                    "regressions": regressions,
+                    "notes": notes,
+                },
+                indent=2,
+            )
+        )
+    else:
+        typer.echo(
+            render_offline_report(
+                scores,
+                aggregate,
+                regressions=regressions,
+                notes=notes,
+                failures=failures,
+            )
+        )
+
+    if write_baseline:
+        import json as _json
+
+        baseline_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline_path.write_text(
+            _json.dumps(baseline_object(aggregate, scores), indent=2) + "\n",
+            encoding="utf-8",
+        )
+        typer.echo(f"baseline written to {baseline_path}", err=True)
+
+    if failures or (check and regressions):
+        raise typer.Exit(EXIT_VALIDATION_ERROR)
 
 
 if __name__ == "__main__":

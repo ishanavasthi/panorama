@@ -1,0 +1,27 @@
+id = "negative-docs-cleanup"
+repo = "acme-api"
+base = "main"
+head = "p4-docs-cleanup"
+
+expect_finding = false
+
+description = """
+A documentation tidy-up plus a comment reword in one handler. Nothing about the
+API's behaviour or shape changes, so a correct review reports no cross-repository
+impact at all.
+"""
+
+notes = """
+Intentionally carries no forbid_repos and no expect_no_hits, so it is reported
+as *not retrieval-scorable* rather than counted as a free pass.
+
+The reason is worth stating: retrieval always ranks something. "No finding
+expected" is a claim about the review, not about retrieval, and asserting it
+offline would either be vacuous or would encode an arbitrary score threshold.
+The honest position is that offline numbers do not cover this case, and the
+report says so.
+
+V2.2 adds negatives that *are* retrieval-scorable — the strongest being a rename
+of a private symbol no sibling imports, where "no sibling should surface" is a
+real, checkable expectation.
+"""

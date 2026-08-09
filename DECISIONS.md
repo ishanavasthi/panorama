@@ -612,3 +612,94 @@ Known and accepted, so they can be stated plainly rather than discovered:
   out of scope.
 - **Absence of a finding is not proof of safety.** Panorama surfaces
   cross-repo impact it can evidence. It is a reviewer's assistant, not a gate.
+
+---
+
+# V2
+
+V1 shipped a working cross-repository reviewer. V2 makes it measurable, then
+makes it better, then makes it run without being asked. Ordering and exit
+criteria live in `v2plan.md`.
+
+## The constraint that shapes V2's delivery
+
+The subscription-only rule carries forward, and it has a consequence worth
+stating once rather than rediscovering: **a hosted GitHub App is structurally
+impossible, not merely deferred.** A server has no Claude Code subscription, and
+giving it one would break both "no API key" and "credentials stay with the tool
+that owns them" at the same time. So automation becomes a *pull* model — a local
+watcher that polls — rather than a *push* model with a webhook endpoint.
+
+That is a real cost: reviews lag by a poll interval, and only run while
+someone's machine is up. In exchange there is no server to operate, no secret
+stored anywhere, and no inbound attack surface at all.
+
+## V2.1 — making quality a number
+
+### The decision
+
+Build the evaluation harness *before* touching retrieval. V1's entire evidence
+base was four fixture pull requests, run twice, scored by hand. Every V2
+retrieval change is a quality claim, and a quality claim with no measurement
+behind it is a preference. So the first milestone produces no product feature at
+all — it produces a baseline.
+
+### What V2.1 shipped
+
+`panorama eval`, in two tiers. Offline scores *retrieval only*: which sibling
+repository the deterministic pass put in front of the model, how far down the
+ranking the right one landed, and whether the specific files that matter were
+surfaced. It runs with no subscription and no network, which is what lets it be
+a **regression gate on every commit** rather than a report someone reads
+occasionally. A second, opt-in tier runs the whole pipeline several times per
+case against the real subscription and scores the review itself, including how
+often two runs disagree.
+
+Ground truth is checked in as one file per case, deliberately outside the
+installed package: case data names fixture repositories, and production code is
+not allowed to.
+
+### Decisions worth recording
+
+- **Ties are ranked honestly.** The ranked list is sorted by score and then
+  alphabetically, so a repository that merely *ties* for the top spot could sit
+  first purely because of its name. Counting that as a win would measure the
+  alphabet. Every member of a tie now shares a rank, and a second metric —
+  *outright* recall@1 — refuses to credit a tie at all.
+- **Negative controls are never a free pass.** Retrieval always ranks
+  something, so "no finding expected" is a claim about the *review*, not about
+  retrieval. A negative case that carries no explicit retrieval expectation is
+  reported as **not scorable**, and the report states how many cases the offline
+  numbers do not cover. The alternative — counting it as a pass — would let a
+  corpus inflate its score by adding easy negatives.
+- **The baseline stores per-case outcomes, not just averages.** A mean happily
+  hides a change that fixes two cases and breaks a third. The gate compares both,
+  and it refuses to compare aggregates at all when the corpus itself has changed,
+  so deleting a hard case can never read as progress.
+- **A case that could not run is reported separately from a case that scored
+  badly.** Conflating them would let a broken environment look like a quality
+  regression.
+
+### What the baseline immediately showed
+
+**The inherited corpus is saturated.** recall@1, recall@3, MRR and file recall
+all measured **1.000** across the four V1 cases. Retrieval is not perfect — the
+corpus is simply too small and too easy to distinguish anything. Had we built
+the dependency-graph channel first, as originally tempting, there would have
+been no way to show whether it helped or hurt. Expanding the corpus is therefore
+a hard prerequisite for the rest of the retrieval work, not an optional
+follow-up.
+
+The one metric with room to move is **outright recall@1 at 0.667**: on the
+convention case, the correct neighbour leads only in a *three-way tie* — the
+exact weakness S4 recorded, now visible as a number instead of a note. That is
+the number the structural retrieval channels have to move.
+
+### A limitation this leaves
+
+Offline scoring covers three of the four inherited cases. The fourth — the
+docs-only control — asserts nothing that deterministic retrieval can check, and
+is scored only in the live tier. The corpus expansion adds negatives that *are*
+offline-checkable, the strongest being a rename of a private symbol no sibling
+imports, where "no sibling should surface" is a real expectation rather than a
+threshold pulled out of the air.

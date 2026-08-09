@@ -226,7 +226,14 @@ def bootstrap(
     dest = dest_root or DEMO_ORG_ROOT
     ensure_dir(dest)
 
-    repo_sources = sorted(p for p in source.iterdir() if p.is_dir())
+    # Dot-directories are never fixture repositories. Without this, anything
+    # that lands in the data tree — an editor's cache, or a `.panorama/` created
+    # by running a command from the wrong directory — is read as a fixture repo
+    # and fails with a confusing "has no base/ directory" instead of being
+    # ignored.
+    repo_sources = sorted(
+        p for p in source.iterdir() if p.is_dir() and not p.name.startswith(".")
+    )
     if not repo_sources:
         raise BootstrapError(f"no fixture repositories found under {source}")
 

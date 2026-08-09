@@ -32,5 +32,14 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.flake8-bugbear]
+# B008 exists to catch a mutable default shared across calls. Typer's
+# Option/Argument sentinels are the framework's designed way to declare a CLI
+# parameter and are not shared state. Ruff only flags them on non-scalar
+# annotations (a `Path` or `list[str]` option, not a `str` one), which would
+# otherwise push every future command toward worse type annotations to stay
+# quiet.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,20 @@
+id = "contract-break-field-rename"
+repo = "acme-api"
+base = "main"
+head = "p1-rename"
+
+expect_finding = true
+category = "contract_break"
+target_repos = ["acme-web"]
+target_files = ["acme-web/src/api/links.ts", "acme-web/src/render.ts"]
+
+description = """
+A public response field is renamed in the API repository. The web client types
+and destructures the old name, so the rename breaks it silently at runtime.
+"""
+
+notes = """
+The easiest case in the corpus for lexical retrieval: the removed field name is
+a distinctive token that appears verbatim in the consumer. If this one ever
+regresses, something is broken in signal extraction rather than in ranking.
+"""

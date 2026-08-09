@@ -1,0 +1,26 @@
+id = "convention-endpoint-drift"
+repo = "acme-api"
+base = "main"
+head = "p3-endpoint-conventions"
+
+expect_finding = true
+category = "convention"
+target_repos = ["acme-contracts"]
+
+description = """
+A new endpoint returns bare-string errors and builds its own local timestamps,
+ignoring the organisation's documented error envelope and timestamp rules.
+"""
+
+notes = """
+Deliberately no target_files. The convention documents reach the model through
+retrieval's separate convention-doc channel, not through the search-hit channel
+that file_recall is computed over, so file-level ground truth here would score
+the wrong channel and read as a failure that is really a category error.
+
+This is the case V1's S4 recorded as the weak one: a violation is about an
+*absent* convention, which leaves almost no lexical footprint, so the correct
+neighbour tends to tie rather than lead. Competition ranking in the scorer means
+that tie is reported honestly instead of being resolved by alphabetical luck.
+Channel-level attribution is future work (V2.7).
+"""

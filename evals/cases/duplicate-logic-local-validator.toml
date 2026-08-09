@@ -1,0 +1,21 @@
+id = "duplicate-logic-local-validator"
+repo = "acme-web"
+base = "main"
+head = "p2-local-validator"
+
+expect_finding = true
+category = "duplicate_logic"
+target_repos = ["acme-shared"]
+target_files = ["acme-shared/src/validateUrl.ts"]
+
+description = """
+The web client adds its own URL validation helper. An equivalent helper already
+exists in the shared library, so the change duplicates logic that is already
+owned and tested elsewhere.
+"""
+
+notes = """
+Retrieval has to match on the added function's name rather than on a removed
+one, so this exercises the added-identifier path rather than the removed-field
+path that the rename case covers.
+"""

@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "recall_k": 3,
+  "aggregate": {
+    "n_cases": 4,
+    "n_scored": 3,
+    "n_unscorable": 1,
+    "n_positive": 3,
+    "recall_at_1": 1,
+    "recall_at_1_outright": 0.6666666666666666,
+    "recall_at_k": 1,
+    "mrr": 1.0,
+    "file_recall": 1.0,
+    "n_forbidden_violations": 0,
+    "n_failed": 0
+  },
+  "cases": {
+    "contract-break-field-rename": {
+      "scorable": true,
+      "expect_finding": true,
+      "rank": 1,
+      "tied_with": 1,
+      "recall_at_1": true,
+      "recall_at_1_outright": true,
+      "recall_at_k": true,
+      "file_recall": 1.0,
+      "passed": true
+    },
+    "convention-endpoint-drift": {
+      "scorable": true,
+      "expect_finding": true,
+      "rank": 1,
+      "tied_with": 3,
+      "recall_at_1": true,
+      "recall_at_1_outright": false,
+      "recall_at_k": true,
+      "file_recall": null,
+      "passed": true
+    },
+    "duplicate-logic-local-validator": {
+      "scorable": true,
+      "expect_finding": true,
+      "rank": 1,
+      "tied_with": 1,
+      "recall_at_1": true,
+      "recall_at_1_outright": true,
+      "recall_at_k": true,
+      "file_recall": 1.0,
+      "passed": true
+    },
+    "negative-docs-cleanup": {
+      "scorable": false,
+      "expect_finding": false,
+      "rank": null,
+      "tied_with": 0,
+      "recall_at_1": false,
+      "recall_at_1_outright": false,
+      "recall_at_k": false,
+      "file_recall": null,
+      "passed": true
+    }
+  }
+}
