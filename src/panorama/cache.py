@@ -60,7 +60,7 @@ from panorama.errors import PanoramaError
 #: Bump when the table layout changes. Any mismatch drops and rebuilds, so this
 #: never needs to be a sequence anyone migrates *through* — only a value that
 #: differs from what is on disk.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 #: Owner read/write only. The cache describes private repository content.
 _FILE_MODE = stat.S_IRUSR | stat.S_IWUSR  # 0600
@@ -249,6 +249,18 @@ class Cache:
 
             CREATE INDEX IF NOT EXISTS watch_reviews_by_time
                 ON watch_reviews (reviewed_at);
+
+            -- Findings a human has dismissed. The only state here that is not
+            -- derived from repository content, and the only one whose loss a
+            -- reader would notice: a rebuild makes a dismissed finding come
+            -- back. That is recoverable and visible, and it can never make a
+            -- review *wrong* — a returning finding is still fully validated.
+            CREATE TABLE IF NOT EXISTS suppressions (
+                fingerprint TEXT PRIMARY KEY,
+                title       TEXT NOT NULL DEFAULT '',
+                source      TEXT NOT NULL DEFAULT '',
+                created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
             """
         )
         self._conn.execute(
@@ -273,6 +285,7 @@ class Cache:
             "DROP TABLE IF EXISTS repo_facts;"
             "DROP TABLE IF EXISTS watch_cursors;"
             "DROP TABLE IF EXISTS watch_reviews;"
+            "DROP TABLE IF EXISTS suppressions;"
             "DROP TABLE IF EXISTS meta;"
         )
         self._create_tables()
@@ -426,6 +439,47 @@ class Cache:
                 "ORDER BY repo, number"
             )
         )
+
+    # -- suppressions -------------------------------------------------------
+
+    def suppress(self, fingerprint: str, *, title: str = "", source: str = "") -> None:
+        """Remember that a human dismissed this finding.
+
+        ``title`` and ``source`` are stored so `panorama suppressions list`
+        shows something a person recognises. A suppression nobody can read is a
+        suppression nobody can undo.
+        """
+        with self._write() as conn:
+            conn.execute(
+                """
+                INSERT INTO suppressions (fingerprint, title, source)
+                VALUES (?, ?, ?)
+                ON CONFLICT (fingerprint) DO UPDATE SET
+                    title = excluded.title,
+                    source = excluded.source
+                """,
+                (fingerprint, title, source),
+            )
+
+    def is_suppressed(self, fingerprint: str) -> bool:
+        row = self._conn.execute(
+            "SELECT 1 FROM suppressions WHERE fingerprint = ?", (fingerprint,)
+        ).fetchone()
+        return row is not None
+
+    def suppressions(self) -> tuple[tuple[str, str, str, str], ...]:
+        """Every suppression as ``(fingerprint, title, source, created_at)``."""
+        return tuple(
+            (row["fingerprint"], row["title"], row["source"], row["created_at"])
+            for row in self._conn.execute(
+                "SELECT fingerprint, title, source, created_at FROM suppressions "
+                "ORDER BY created_at DESC, fingerprint"
+            )
+        )
+
+    def clear_suppressions(self) -> int:
+        with self._write() as conn:
+            return conn.execute("DELETE FROM suppressions").rowcount or 0
 
     # -- operations ---------------------------------------------------------
 

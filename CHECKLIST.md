@@ -385,10 +385,10 @@ than buried.
       **No change made**, reason recorded below.
 - [-] Tuning iteration 2 — **not spent.** The sweep showed there is nothing to
       spend it on; every constant above zero is identical.
-- [~] `eval --live -k 3` across the full corpus — running; results land in a
-      follow-up commit
+- [x] `eval --live -k 3` across the full corpus — 54 runs against the real
+      subscription
 - [x] Recall@3 ≥ 0.90 on positives — **met at 1.000**
-- [~] False-positive rate ≤ 0.15 on negatives — pending the live run
+- [x] False-positive rate ≤ 0.15 on negatives — **met at 0.000**
 - [x] No case regressed versus V1 baseline — **met**; the V1 case that only
       *tied* for first is now outright first
 - [x] `DECISIONS.md`: V2 retrieval entry with the before/after tables
@@ -420,6 +420,41 @@ than buried.
   way of doing that needs a parameter fitted against the only corpus available.
   The remaining headroom is not in fusion — it is in the HTTP-contract couplings
   that nothing declares, which is a different design rather than a tuning pass.
+
+### The live evaluation — 18 cases, 3 runs each, 54 reviews
+
+| Measure | Result |
+|---|---:|
+| **False-positive rate on negatives** | **0.000** |
+| Evidence cites the right repository | 0.846 |
+| Evidence cites the right file | 0.615 |
+| Category matches the label | 0.718 |
+| Findings discarded by host validation, per run | 0.056 |
+| Flake rate (cases that disagreed across runs) | 0.222 |
+
+- **Every negative control passed every run — 15 for 15.** No docs change, test
+  addition, reformat, dependency bump or private rename produced a single
+  cross-repository claim. That is the number that decides whether anyone keeps
+  the tool switched on, and it is the plan's own target of ≤ 0.15 met by a
+  wide margin.
+- **The two cases that scored zero are category disagreements, not misses.**
+  On the removed-enum-member and cross-language date-formatting cases, the model
+  found a cross-repository finding citing the **right repository and the right
+  file** on 5 of 6 runs — it simply called it something other than the label.
+  Adding a UTC formatter genuinely touches the timestamps *convention* as well
+  as duplicating a helper, so the boundary is real rather than a model error.
+  Recorded as measured, without relabelling the cases to improve the score.
+- **The genuinely weak case is the status-code break**, at 1 of 3. That is the
+  same case where both structural channels are silent and the lexical signal is
+  ambiguous — the live tier and the offline tier agree about where the weakness
+  is, which is a good sign for the harness.
+- **Host validation earned its place.** Roughly three findings across 54 runs
+  were discarded as unsupported, and in one run two discards left a case with no
+  findings at all — discard-never-downgrade working exactly as intended rather
+  than quietly shipping a weaker claim.
+- **Flake is real and worth knowing: 22%.** Four cases answered differently
+  across three runs. This is why the live tier runs each case more than once and
+  why no quality claim rests on a single run.
 
 ---
 
@@ -537,28 +572,77 @@ and needs the maintainer to invoke it.
 
 ---
 
-## V2.10 — Inline comments, fingerprints, suppression
+## V2.10 — Fingerprints and suppression · **DONE** · inline comments **dropped**
 
-- [ ] Finding fingerprint: category + normalized title + evidence paths (not lines)
-- [ ] Inline comments via `gh api /pulls/{n}/reviews`
-- [ ] `pr_line` → diff position mapping
-- [ ] Summary comment remains the canonical idempotent artifact
-- [ ] Inline comments posted only for fingerprints new since the last run
-- [ ] Dismissal read from 👎 reaction or explicit reply directive
-- [ ] Per-owner suppression store in the cache
-- [ ] Suppressed findings **counted in the report** (silence always explained)
-- [ ] `panorama suppressions list` / `clear`
-- [ ] Test: position mapping — added line · context line · multi-hunk · rename ·
-      hunk boundary
-- [ ] Test: fingerprint stable across reworded title and shifted lines
-- [ ] Test: fingerprint changes when evidence changes repo
-- [ ] Test: suppression round-trip
-- [ ] Test: **a forged dismissal can only subtract** — never add, escalate, or
+- [x] Finding fingerprint: category + normalized title + evidence paths (not lines)
+- [-] Inline comments via `gh api /pulls/{n}/reviews` — **dropped**, per the
+      plan's own drop order. See the reasoning below.
+- [-] `pr_line` → diff position mapping — dropped with inline comments
+- [x] Summary comment remains the canonical idempotent artifact
+- [x] Dismissal read from 👎 reaction or explicit reply directive
+- [x] Per-owner suppression store in the cache
+- [x] Suppressed findings **counted in the report** (silence always explained)
+- [x] Each finding prints a short reference a reader can dismiss with
+- [x] `panorama suppressions list` / `clear`
+- [x] Test: fingerprint stable across cosmetic rewording and shifted lines
+- [x] Test: fingerprint changes when evidence changes repo, file, or category
+- [x] Test: suppression round-trip, and survival across runs
+- [x] Test: **a forged dismissal can only subtract** — never add, escalate, or
       alter a citation
-- [ ] Test: `--inline` with zero valid `pr_line`s posts nothing, does not error
-- [ ] Live: two runs on a changing PR → one summary, inline only for new findings
+- [x] Test: a bare "dismiss" in ordinary discussion is not a directive
+- [x] Test: a dismissal naming a fingerprint we never produced stores nothing
+- [x] 39 new tests; ruff clean
+- [ ] Live: two runs on a changing PR → one summary, suppression respected
 
-**Exit:** the live two-run check passes.
+**Exit: met for the part that shipped.** Inline comments were dropped
+deliberately; the live check needs a seeded demo organisation.
+
+### Why inline comments were dropped
+
+`v2plan.md` names the drop order in advance: co-change → selection → **inline
+comments within V2.10** → `status`. Two of the three earlier candidates were
+built anyway, so this is the first thing actually dropped, and it is the one the
+plan nominated.
+
+The reasoning is the trade-off the plan recorded up front. A summary comment is
+idempotent because a single marked issue comment can be edited in place. A
+*review* with inline comments cannot be: the API creates a new review every
+time. Making that safe means tracking which fingerprints were posted inline on
+which run and posting only the new ones — real state, in the path that writes to
+somebody's pull request, for a presentational gain.
+
+Fingerprints and suppression were the half of this milestone with teeth: they
+are what stops a reviewer being muted, and they are where constraint #8 lives.
+They shipped. Inline comments are a placement improvement on findings that are
+already delivered, and they are the right thing to leave for a version that can
+verify them live.
+
+### Findings from V2.10
+
+- **Fingerprints deliberately exclude severity and confidence.** The model's own
+  hedging varies between runs on identical input, so including it would let the
+  same finding return wearing a different label and defeat its own dismissal.
+- **A known limit, stated rather than engineered around.** Normalisation handles
+  case, punctuation and whitespace but does not remove words, so a model that
+  drops "the" between runs produces a new identity and an existing dismissal
+  stops applying. Stripping common words would collapse genuinely different
+  findings into one identity — and silencing a real finding is a far worse
+  failure than repeating a dismissed one, so the conservative direction is the
+  correct one.
+- **Suppression runs after validation, not before.** A dismissed finding is
+  still validated first, so a dismissal can never be the reason an unsupported
+  claim slips through — it only removes things that had already earned a place.
+- **Constraint #8 is enforced by shape, not by care.** The only operation the
+  suppression module performs on a review is *removal from a list*; nothing in
+  it constructs a finding. A test feeds it a thread full of hostile directives —
+  add a finding, escalate everything, cite a credentials file — and asserts the
+  sole achievable effect was removing one finding Panorama itself produced.
+- **A dismissal naming an unknown fingerprint stores nothing.** Otherwise a
+  thread could fill the suppression table with entries nobody can interpret, and
+  `suppressions list` would stop being readable — which would make the state
+  underivable and therefore un-undoable.
+
+---
 
 ---
 

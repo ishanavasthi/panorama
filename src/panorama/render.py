@@ -19,6 +19,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from panorama.fingerprint import fingerprint as _fingerprint
+from panorama.fingerprint import short as _short
 from panorama.intake import PullRequest
 from panorama.models import Finding
 from panorama.validation import ValidatedReview
@@ -52,6 +54,8 @@ def _render_finding(index: int, finding: Finding) -> list[str]:
         if finding.pr_line is not None:
             location += f":{finding.pr_line}"
         out.append(f"- In this pull request: `{location}`")
+    out.append(f"- Reference: `{_short(_fingerprint(finding))}` "
+               "(reply `panorama: dismiss <reference>` to stop seeing it)")
     refs = _evidence_refs(finding)
     if refs:
         out.append("- Evidence:")
@@ -148,6 +152,17 @@ def _render_footer(validated: ValidatedReview, retrieval_truncated: bool) -> lis
     else:
         lines.append("_No findings were discarded during host validation._")
 
+    suppressed = getattr(validated, "suppressed", ())
+    if suppressed:
+        # Explained, never merely absent: the reader has to be able to tell
+        # "nothing to report" from "you asked me to stop saying this".
+        noun = "finding" if len(suppressed) == 1 else "findings"
+        lines.append("")
+        lines.append(
+            f"_{len(suppressed)} {noun} suppressed because they were previously "
+            "dismissed. See `panorama suppressions list`._"
+        )
+
     if validated.summary_redacted:
         lines.append("")
         lines.append("_The model's summary was withheld: it did not pass secret screening._")
@@ -187,6 +202,10 @@ def review_json_obj(
             for d in validated.discarded
         ],
         "retrieval_truncated": retrieval_truncated,
+        "suppressed": [
+            {"fingerprint": _fingerprint(f), "title": f.title}
+            for f in getattr(validated, "suppressed", ())
+        ],
         # Which repositories retrieval put in front of the model, and why. Not
         # findings — the record of what was *considered*, so a reader can see
         # the shape of the search rather than only its conclusions.

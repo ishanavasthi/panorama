@@ -27,7 +27,7 @@ This module contains no fixture repository names, field names, or finding text.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from panorama.intake import PullRequest
 from panorama.models import Finding, Review
@@ -71,6 +71,11 @@ class ValidatedReview:
     findings: list[Finding]
     discarded: list[DiscardedFinding]
     summary_redacted: bool = False
+    #: Findings a human already dismissed, removed after validation. Counted
+    #: rather than merely absent: a reviewer that quietly says less than it
+    #: found is worse than one that says too much, because nobody can tell
+    #: "nothing to report" from "not shown".
+    suppressed: list[Finding] = field(default_factory=list)
 
     @property
     def has_findings(self) -> bool:
@@ -79,6 +84,10 @@ class ValidatedReview:
     @property
     def discard_count(self) -> int:
         return len(self.discarded)
+
+    @property
+    def suppressed_count(self) -> int:
+        return len(self.suppressed)
 
 
 # ---------------------------------------------------------------------------

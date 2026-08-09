@@ -1427,6 +1427,51 @@ contract that nothing declares — and closing that would mean reading route
 strings and response shapes as a first-class signal, which is a different design,
 not a tuning pass.
 
+### The live number
+
+Retrieval scoring says which repository was put in front of the model. Whether
+the model then says something true is a separate question, so the whole corpus
+was run through the real subscription three times per case — 54 reviews.
+
+| Measure | Result |
+|---|---:|
+| **False-positive rate on negative controls** | **0.000** |
+| Evidence cites the right repository | 0.846 |
+| Evidence cites the right file | 0.615 |
+| Category matches the label | 0.718 |
+| Findings discarded by host validation, per run | 0.056 |
+| Flake rate | 0.222 |
+
+**The number that matters most is the zero.** Across fifteen runs of five
+negative controls — a docs tidy-up, a test addition, a reformat, a dependency
+bump, and a rename of a private helper — not one produced a cross-repository
+claim. That is the failure that destroys trust in a reviewer, the plan set a
+target of ≤ 0.15, and the measured rate is nothing at all.
+
+**The two cases that scored zero on category are disagreements, not misses.** On
+the removed-enum-member and cross-language date-formatting cases, the model
+produced a cross-repository finding citing the **right repository and the right
+file** in five of six runs, and simply called it something other than the label.
+That is defensible: adding a UTC formatter really does touch the timestamps
+convention as well as duplicating a shared helper. The categories are recorded
+as measured rather than relabelled to improve the score — the boundary between
+"duplicate" and "convention" is genuinely fuzzy, and pretending otherwise would
+be tuning the ground truth to the result.
+
+**The weakest case is the status-code break, at one run in three.** That is the
+same case both structural channels are silent on and where the lexical signal is
+ambiguous. The offline and live tiers agree about where the weakness is, which
+is a good sign for the harness.
+
+**Host validation earned its place.** Around three findings across 54 runs were
+discarded as unsupported, and in one run two discards left a case reporting
+nothing — discard-never-downgrade behaving exactly as designed rather than
+quietly shipping a weaker version of an unverifiable claim.
+
+**Flake is 22%.** Four of eighteen cases answered differently across three runs.
+This is precisely why the live tier runs each case more than once, and why no
+quality claim in this document rests on a single run.
+
 ### Provenance, rendered
 
 Every ranked repository now carries a plain-language reason, and the rendered
@@ -1601,3 +1646,84 @@ need `panorama demo --github` against a real account, which creates private
 repositories. That is an outward-facing action, it is never run automatically,
 and it waits for the maintainer. Everything else is covered offline, including
 rate limiting, network failure and recovery, restart resumption, and shutdown.
+
+## V2.10 — not repeating yourself
+
+### The problem
+
+A reviewer that keeps raising a finding its readers have already rejected gets
+muted. Once it is muted, everything it says is lost — including the finding that
+actually mattered. So findings need an identity that survives between runs, and
+dismissals need to be remembered.
+
+### What a finding's identity is made of
+
+Category, normalised title, and the set of evidence **paths**. Three exclusions
+matter more than the inclusions:
+
+- **Line numbers**, because they drift constantly. An import added at the top of
+  a file moves every finding below it, and an identity that moved with them
+  would make dismissal useless within a day.
+- **Severity and confidence**, because the model's own hedging varies between
+  runs on identical input. Including them would let the same finding come back
+  wearing a different label and escape its own dismissal.
+- **Rationale and recommendation**, which are reworded on every generation.
+
+The title is normalised for case, punctuation and whitespace. It is *not*
+stripped of common words, and that leaves a real limitation: a model that says
+"breaks the consumer" one run and "breaks consumer" the next produces a new
+identity, and an existing dismissal stops applying.
+
+That was chosen rather than overlooked. Removing common words would collapse
+genuinely different findings into one identity — and **silencing a real finding
+is far worse than repeating a dismissed one**, so the conservative direction is
+the correct one. The failure mode this leaves is a finding you have to dismiss
+twice; the alternative was a finding you never see.
+
+### Constraint #8, enforced by shape
+
+Dismissals are read from a pull request thread, which is written by anyone who
+can comment. The rule is absolute: **untrusted input may only reduce what
+Panorama says.** It can never add a finding, raise a severity, or alter a
+citation.
+
+That is not a policy applied carefully — it is the shape of the code. The only
+operation the suppression module performs on a review is removal from a list.
+Nothing in it constructs a finding, so there is nothing for an injected
+instruction to reach. A test feeds it a thread full of hostile directives — add
+a finding, escalate everything, cite a credentials file — and asserts that the
+sole achievable effect was removing one finding Panorama itself had produced.
+
+Two smaller decisions protect the same property. **Suppression runs after
+validation**, so a dismissed finding was validated first and a dismissal can
+never be the reason an unsupported claim slips through. And **a dismissal naming
+a fingerprint Panorama never produced stores nothing**, because otherwise a
+thread could fill the suppression table with entries nobody can interpret, and
+`suppressions list` would stop being readable — which would make the state
+impossible to undo.
+
+Suppressed findings are counted in the report, exactly like validation discards.
+A reviewer that quietly says less than it found is worse than one that says too
+much, because nobody can tell "nothing to report" from "not shown".
+
+### Inline comments: dropped, as planned
+
+`v2plan.md` named the drop order in advance — co-change, then selection, then
+**inline comments within V2.10**, then `status`. The first two were built
+anyway, so this is the first thing genuinely dropped, and it is the one the plan
+nominated.
+
+The reasoning is the trade-off recorded up front. A summary comment is
+idempotent because one marked issue comment can be edited in place. A *review*
+with inline comments cannot be: the API creates a new review every time. Making
+that safe means tracking which fingerprints were posted inline on which run and
+posting only the new ones — real persistent state, in the code path that writes
+to somebody else's pull request, in exchange for better *placement* of findings
+that are already being delivered.
+
+Fingerprints and suppression are the half of this milestone with teeth: they are
+what stops the reviewer being muted, and they are where constraint #8 lives.
+They shipped. Inline comments are a presentation improvement whose exit
+criterion is a live two-run check, and that check cannot be performed without a
+seeded organisation. Building it unverified in order to tick a box would have
+been the worse choice.

@@ -6,6 +6,7 @@ agents attach the real subcommands (`review`, `fixtures`, `demo`, ...) here.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import typer
@@ -34,6 +35,7 @@ from panorama.evaluation import (
     run_offline,
 )
 from panorama.evaluation.report import load_baseline
+from panorama.fingerprint import short as short_fingerprint
 from panorama.fixtures import bootstrap as bootstrap_fixtures
 from panorama.intake import (
     GitHubPullRequestSource,
@@ -46,6 +48,7 @@ from panorama.render import render_markdown, review_json_obj
 from panorama.retrieval import retrieve
 from panorama.review import context_truncated, run_review
 from panorama.selection import DEFAULT_CLONE_BUDGET
+from panorama.suppression import apply_suppressions
 from panorama.validation import validate_review
 from panorama.watch import (
     DEFAULT_HOURLY_CAP,
@@ -235,6 +238,17 @@ def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
         retrieval = retrieve(pull_request, workspace, cache=cache)
         result = run_review(pull_request, workspace, retrieval, runner=runner)
         validated = validate_review(result.data, pull_request, workspace)
+
+        # Suppression runs *after* validation, deliberately. A dismissed
+        # finding is still validated first, so a dismissal can never be the
+        # reason an unsupported claim slips through — it only removes things
+        # that had already earned their place. The review is frozen, so this
+        # produces a new one rather than editing the validated result.
+        dropped = apply_suppressions(validated.findings, cache)
+        validated = replace(
+            validated, findings=dropped.kept, suppressed=dropped.suppressed
+        )
+
         truncated = retrieval.truncated or context_truncated(pull_request.diff)
         return validated, truncated, retrieval.ranked_repos
     finally:
@@ -672,3 +686,61 @@ def watch(
         cache.close()
 
     typer.echo(summarise(stats))
+
+
+suppressions_app = typer.Typer(
+    name="suppressions",
+    help="Inspect and undo findings that were dismissed on a pull request.",
+    no_args_is_help=True,
+)
+app.add_typer(suppressions_app)
+
+
+@suppressions_app.command("list")
+def suppressions_list(
+    owner: str = typer.Argument(..., help="Owner whose suppressions to show."),
+) -> None:
+    """Show every finding currently being withheld, and why.
+
+    A suppression nobody can read is a suppression nobody can undo, which is
+    why this exists at all: dismissals are read from a pull request thread, and
+    state derived from untrusted input has to be inspectable.
+    """
+    try:
+        cache = Cache.for_owner(owner)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    try:
+        rows = cache.suppressions()
+    finally:
+        cache.close()
+
+    if not rows:
+        typer.echo(f"No suppressed findings for {owner}.")
+        return
+
+    typer.echo(f"{len(rows)} suppressed finding(s) for {owner}:")
+    for digest, title, source, created_at in rows:
+        typer.echo(f"  {short_fingerprint(digest)}  {title or '(untitled)'}")
+        typer.echo(f"    dismissed via {source or 'unknown'} on {created_at}")
+
+
+@suppressions_app.command("clear")
+def suppressions_clear(
+    owner: str = typer.Argument(..., help="Owner whose suppressions to clear."),
+) -> None:
+    """Forget every dismissal, so withheld findings are reported again."""
+    try:
+        cache = Cache.for_owner(owner)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    try:
+        removed = cache.clear_suppressions()
+    finally:
+        cache.close()
+
+    typer.echo(f"Cleared {removed} suppression(s) for {owner}.")

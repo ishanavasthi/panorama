@@ -274,6 +274,8 @@ PRODUCTION_MODULES = (
     "panorama.demo",
     "panorama.doctor",
     "panorama.errors",
+    "panorama.fingerprint",
+    "panorama.suppression",
     "panorama.fixtures.bootstrap",
     "panorama.intake",
     "panorama.models",

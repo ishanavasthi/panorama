@@ -120,9 +120,36 @@ Two things this table does *not* say, both recorded in `DECISIONS.md`:
 
 ## Evaluation against the model
 
-The fixtures were reviewed against a real Claude Code subscription to record
-category- and evidence-level outcomes. (Exact model wording is not recorded — it
-varies between runs; the *categories and cited repositories* are what matter.)
+The whole corpus was run through a real Claude Code subscription three times per
+case — 54 reviews — scoring outcomes rather than wording, because wording varies
+between runs and is not the thing being measured.
+
+```bash
+uv run panorama eval --live -k 3
+```
+
+| Measure | Result |
+|---|---:|
+| **False positives on negative controls** | **0.000** |
+| Evidence cites the right repository | 0.846 |
+| Evidence cites the right file | 0.615 |
+| Category matches the label | 0.718 |
+| Findings discarded by host validation, per run | 0.056 |
+| Flake rate | 0.222 |
+
+The zero is the number that matters. Across fifteen runs of five negative
+controls — a docs tidy-up, a test addition, a reformat, a dependency bump, and a
+rename of a private helper nothing else can reference — not one produced a
+cross-repository claim.
+
+Two caveats, both recorded rather than smoothed over. Category accuracy is the
+lowest figure, and its misses are mostly *disagreements*: on two cases the model
+cited the right repository and the right file but chose a different category,
+and the boundary it chose is defensible. Flake is real at 22% — four cases
+answered differently across three runs, which is why each case is run more than
+once and why no claim here rests on a single run.
+
+The V1 evaluation, for comparison:
 
 | PR | Expected | Result (both passes) |
 |---|---|---|

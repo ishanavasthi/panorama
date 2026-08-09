@@ -496,9 +496,20 @@ negative controls — changes where the correct answer is to say nothing.
 Retrieval scoring is deterministic, needs no subscription and no network, and
 runs on every commit as a **regression gate**: a change that lowers recall
 without a recorded reason does not land. The full pipeline, including the model,
-is scored separately and by hand, because it needs a real subscription and
+is scored separately and opt-in, because it needs a real subscription and
 because model wording varies between runs — outcomes are recorded, never
 phrasing.
+
+Where it stands. Retrieval puts the right repository in the top three for
+**every** positive case and outright first for ten of twelve. Running the whole
+corpus through the model three times each — 54 reviews — produced a
+**false-positive rate of zero** on the negative controls: no docs change, test
+addition, reformat, dependency bump or private rename produced a single
+cross-repository claim. Evidence cited the right repository 85% of the time and
+the right file 62%. Category accuracy is the weakest figure at 72%, and its
+misses are largely disagreements about a genuinely fuzzy boundary rather than
+wrong locations. Flake — the same case answered differently across runs — is
+22%, which is why the live tier never runs a case only once.
 
 `docs/corpus.md` describes what the corpus contains, what each case is for, and
 what it deliberately does not cover.
