@@ -165,12 +165,28 @@ the removed error code — while leaving the shared library that merely defines 
 and the conventions document that describes it unranked. It is **outright rank
 1**, and the right repository is now what the model is handed first.
 
-**Live: not re-measured yet.** Retrieval putting the right repository first is a
-necessary condition, not a sufficient one. The difficulty this case was built
-for lives at the review tier: the model has to say the gateway *breaks* rather
-than that three repositories *mention* an error code. Needs
-`panorama eval --live -k 3` against the real subscription to know whether
-1-in-3 moved, and `k > 3` to say anything confident about a change that size.
+**Live: re-measured, and it did *not* move.** `eval --live -k 5` on this case
+alone, after the channel landed: **2 of 5 passes**, flake still present.
+Against the previous 1 of 3, that is unchanged within the noise five runs can
+resolve — it is emphatically not a fix.
+
+The informative number is alongside it: **evidence-repo accuracy 0.400**. On
+three of five runs the model did not cite the gateway at all, even though
+retrieval now hands it over ranked outright first. So the failure is not that
+the right repository was never offered. It is the thing this case was built to
+test, exactly as its own notes predicted: the model has to say the gateway
+*breaks* rather than that three repositories *mention* an error code, and it
+does that about half the time.
+
+**Conclusion: A3 fixed the retrieval half and left the review half untouched.**
+That is worth having as a clean separation — the two tiers now disagree about
+this case, which localises the remaining problem to the prompt's category and
+severity rubric rather than to what gets looked at.
+
+**Still open, and now better specified.** A confirmation run at `k = 10` was
+started and interrupted before it reported, so 2-of-5 is the best current
+estimate and a wide one. Anything claiming to improve this needs `k ≥ 10` to be
+distinguishable from flake (**B2**), and the lever is the prompt, not retrieval.
 
 ---
 

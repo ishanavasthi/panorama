@@ -569,9 +569,11 @@ is scored separately and opt-in, because it needs a real subscription and
 because model wording varies between runs — outcomes are recorded, never
 phrasing.
 
-Where it stands. Retrieval puts the right repository in the top three for
-**every** positive case and outright first for ten of twelve. Running the whole
-corpus through the model three times each — 54 reviews — produced a
+Where it stands. Retrieval puts the right repository **outright first for every
+positive case**, with no ties anywhere and no leads at all on the negatives —
+which also means this corpus has stopped being able to show that a further
+retrieval change helped. Running the whole corpus through the model three times
+each — 54 reviews, measured before the HTTP-contract channel landed — produced a
 **false-positive rate of zero** on the negative controls: no docs change, test
 addition, reformat, dependency bump or private rename produced a single
 cross-repository claim. Evidence cited the right repository 85% of the time and

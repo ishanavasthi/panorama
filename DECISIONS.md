@@ -1988,3 +1988,32 @@ harness can now only detect regressions, not improvements.** It stays a
 per-commit gate, and it has stopped being evidence for any further retrieval
 change. Anything after this needs a larger or harder corpus, or the live tier,
 before it can claim to have helped anything.
+
+### The live re-measurement, and what it refused to confirm
+
+`A1` and `B3` were the two cases stuck at rank 2, and closing `A3` fixed both —
+*at the retrieval tier*. `B3` was also the weakest case at the **review** tier,
+at 1 of 3 live runs, and the backlog's guess was that fixing retrieval would
+carry the review with it.
+
+It did not. Re-measured on that case alone at `k = 5`: **2 of 5**, still flaky.
+Against 1 of 3 that is no change that five runs can detect.
+
+The number that explains it is evidence-repo accuracy on the same runs: **0.400**.
+On three of five runs the model did not cite the gateway at all, despite
+retrieval handing it over ranked outright first. So the remaining failure is not
+that the right repository was never offered — it is the difficulty the case was
+built for and which its own notes predicted would end up here: saying the gateway
+*breaks* rather than that three repositories *mention* an error code.
+
+Two things worth taking from a negative result:
+
+- **The tiers now disagree about this case**, which is more informative than
+  either number alone. It localises what is left to the prompt's category and
+  severity rubric rather than to retrieval, and it means the offline gate can no
+  longer be used as a proxy for whether this case is fixed.
+- **The estimate is deliberately left wide.** A `k = 10` confirmation run was
+  started and interrupted before reporting, so 2-of-5 stands as the best current
+  figure. With a flake rate of 22% corpus-wide, nothing claiming to move this
+  should be believed below `k = 10`. Recorded as measured rather than rounded
+  into a story.

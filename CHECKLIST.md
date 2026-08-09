@@ -754,10 +754,12 @@ in the same form so status stays in one place.
 - [x] Measured: **recall@1 0.833 → 1.000**, outright recall@1 0.833 → 1.000,
       MRR 0.917 → 1.000, recall@3 and file recall held at 1.000
 - [x] Measured: no case regressed; all four scorable negatives still zero leads
-- [ ] Live: `eval --live -k 3` re-measurement of `B3` — **not done**, needs the
-      real subscription
+- [x] Live: `eval --live -k 5` re-measurement of `B3` — **done, and negative.**
+      2 of 5 versus 1 of 3 before: unchanged within the noise. A `k = 10`
+      confirmation run was interrupted before reporting.
 
-**Exit met offline.** The live half of `B3` is outstanding.
+**Exit met offline.** The live re-measurement was run and says the review half
+of `B3` did not move.
 
 ### Findings from V2.12
 
@@ -787,6 +789,14 @@ in the same form so status stays in one place.
   produces is deduplicated away as one the lexical pass already found, so the
   claim "it shows the model places it would not otherwise have seen" is
   unmeasured. Recorded as `A4` rather than implied.
+- **Better retrieval did not buy a better review, and that is useful.** `B3` was
+  the weakest case at both tiers. Retrieval now ranks its target outright first;
+  the live pass rate went from 1-of-3 to **2-of-5**, which is no change at all.
+  Evidence-repo accuracy of 0.400 on those runs says why: on three of five the
+  model did not cite the gateway even though it was handed over first. The two
+  tiers now disagree about this case, which is the most useful thing the
+  measurement produced — it localises what is left to the prompt's rubric rather
+  than to what gets looked at.
 - **The corpus is saturated again.** Every offline retrieval metric now reads
   1.000. The harness can still catch a regression and can no longer demonstrate
   an improvement — the same position V2.1 reported, for the same reason, and the
