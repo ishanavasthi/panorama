@@ -1002,3 +1002,165 @@ documents each answer a different question — the README answers *how do I run
 it*, this file answers *why is it built this way*, the corpus spec answers *what
 is it measured against* — and none of them answered *how does it work*. It is
 the document to hand someone before explaining the project.
+
+## V2.4 — finding what shares no words
+
+### The problem this channel exists for
+
+The lexical pass can only find a link between two repositories that share
+*vocabulary*. That covers renames and duplicated helpers well, and it covers one
+important case not at all: a convention violated by an **absence**. A new public
+endpoint mounted without a version prefix breaks the organisation's versioning
+rule, and the diff contains no word that appears anywhere in the document
+stating that rule. There is nothing to match on. No amount of ranking connects
+them.
+
+The corpus was built in V2.2 with exactly that case in it, scoring a deliberate
+zero, so that this milestone had something real to fix.
+
+### How edges are found
+
+Every repository already declares two things in a file it ships: the name it
+publishes itself under, and the names it depends on. An edge exists when one
+repository depends on a name another repository declares.
+
+The important detail is what is *not* done. The obvious implementation matches a
+dependency string against a directory in the workspace. That works flawlessly on
+a tidy fixture organisation and fails on real ones, where the folder and the
+published package are routinely different — `api-server` publishing
+`@scope/api`. Resolving *declared name to declared name* costs nothing extra and
+is simply correct, and the fixture organisation was arranged in V2.2 so that the
+shortcut fails a test rather than passing one.
+
+Dependencies that resolve to nothing are external, and they are counted rather
+than discarded — "most of these dependencies are outside this organisation" is
+useful context when explaining why a channel found little.
+
+### Rank means the kind of edge, not a position in a list
+
+A repository's rank in this channel comes from a fixed ordering: a direct
+*dependent* first, then a direct *dependency*, then the same two one hop further
+out. Two consequences are deliberate.
+
+**A provider never takes rank 1.** Something that depends on the changed
+repository can be *broken* by it. Something the changed repository depends on can
+only be duplicated or contradicted. The first is a stronger claim than the
+second, and it stays stronger whether or not any consumer happens to exist in
+this particular organisation. Had ranks been assigned by comparing whatever the
+channel found, a provider would be promoted to first place simply because
+nothing better turned up — and the rank would quietly change meaning from
+"strong structural claim" to "best of a bad lot". That matters enormously once
+these ranks are fused with another channel's, because fusion is only meaningful
+if a rank means the same thing on both sides.
+
+**Silence is a correct answer.** A Python client and a Go gateway can depend
+utterly on a TypeScript service and appear in no manifest anywhere, because the
+coupling is an HTTP contract. This channel says nothing about them. About a
+third of the corpus is built to be that case, so that fusion is forced to cope
+with abstention rather than being flattered by a channel that always has an
+opinion.
+
+### Fusion arrived a milestone early, on purpose
+
+The plan put reciprocal rank fusion in V2.7. It landed here instead, because
+V2.4's exit criteria are all *measurements* and a channel that is not fused into
+the result changes no measurement. Building it, not wiring it up, and claiming an
+improvement three milestones later would have been the kind of unfalsifiable
+progress this whole plan is arranged to prevent. V2.7 keeps the rest of its job:
+tuning, provenance in the rendered report, and the final honest number.
+
+### What the measurement said
+
+The result the milestone existed for:
+
+| Case | Before | After |
+|---|---|---|
+| Unversioned endpoint (the deliberate zero) | unranked | **rank 1** |
+| Convention drift (the case tied since V1's S4) | rank 2 | **rank 1** |
+
+| Metric | V2.2 | V2.4 |
+|---|---:|---:|
+| recall@3 | 0.917 | **1.000** |
+| MRR | 0.833 | **0.875** |
+| recall@1 | 0.750 | 0.750 |
+
+Every positive case now has its target in the top three.
+
+### And what it cost: two cases regressed
+
+Two contract-break cases fell from rank 1 to rank 2. The cause is precise, and
+it is the exact trade-off recorded when RRF was chosen over a weighted sum.
+
+In both, the conventions repository is the lexical runner-up *and* a declared
+dependency of the pull request's repository. It therefore collects a vote from
+each channel, while the true target collects one, and two second places outweigh
+one first place. Fusion by rank cannot see that in one of those cases the true
+target led lexically by 18.0 to 4.0 — an overwhelming margin — and in the other
+by almost nothing. **Both look identical to it**, because rank fusion discards
+magnitude. That was written down as the known cost of the approach before any of
+it was built; this is what it looks like in practice.
+
+### Why it was accepted rather than tuned away
+
+Every fix that stays inside the "no fitted weights" rule was tried on paper and
+fails:
+
+- **Lowering the fusion constant** does not help. Two second places beat one
+  first place at every value of it; that is a property of summing, not of the
+  constant.
+- **Taking the best channel's rank instead of the sum** fixes both regressions
+  and immediately un-fixes the convention case that motivated the entire
+  milestone. It trades the thing we came for.
+- **Making the channel diff-aware** — only voting when the change "looks like" it
+  touches the dependency — is a heuristic with no generic definition, and any
+  definition would be shaped by the two cases in front of us. That is the
+  fixture-specific special-casing the plan forbids by name.
+- **Per-channel weights** would work, and the only data available to fit them is
+  the corpus they would then be scored on.
+
+So the honest position is that this is a real, understood limitation with a
+recorded cause, and the aggregate trade is favourable: perfect recall@3, better
+MRR, the two hardest cases in the corpus fixed, at the price of two targets
+sitting one place lower while still comfortably inside the top three.
+
+There is a second reading worth stating, because it is genuinely arguable rather
+than a consolation. Removing a public endpoint really does implicate the
+versioning convention, so a reviewer *should* look at the conventions repository
+for that change. Retrieval did not become wrong there so much as less
+single-minded. The labelled target is what it is, though, and the number is
+reported as a regression rather than explained away.
+
+### A live spot check on the case that motivated all of this
+
+Retrieval scoring only proves the right repository was put in front of the
+model. Whether the model then does anything useful with it is a separate
+question, so the unversioned-endpoint case was run once through the full
+pipeline against the real subscription.
+
+It produced a single `convention` finding, correctly identifying that the new
+endpoint is mounted at an unversioned path, citing the versioning document and
+the conventions index in the neighbouring repository plus the changed line in
+the pull request. Every citation survived host validation; nothing was
+discarded. It also noted, unprompted, that no consumer calls the new endpoint
+yet — so nothing is broken today — which is the right severity judgement.
+
+This is **one run, recorded as a spot check rather than a measurement**. A
+single run cannot separate a real capability from a lucky one, which is why the
+live tier runs each case several times and why that happens at V2.7. What it
+does establish is that the retrieval improvement carries through to the output
+rather than stopping at a ranking: before this milestone, the model was never
+shown the document at all.
+
+### One design choice that protected the negatives
+
+The dependency channel produces **no file-level leads**. A manifest edge tells
+you which repository matters, never where in it. Emitting the manifest line as a
+lead would have been technically true and practically useless — and because this
+channel is blind to the diff, it would have made every negative control in the
+corpus surface a lead for a change that touched nothing. All four scorable
+negatives still produce exactly zero leads.
+
+That blindness to the diff is the channel's real cost, and it is now pinned by a
+test so it stays a known property rather than a rediscovered surprise: this
+channel votes identically for every pull request in a repository, whatever the
+change actually does.

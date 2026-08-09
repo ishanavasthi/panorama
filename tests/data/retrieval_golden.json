@@ -62,11 +62,22 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 1 identifier(s) with the diff: url"
+        ],
         "repo": "acme-web",
-        "score": 5.0,
+        "score": 0.016393,
         "signals": [
           "url"
         ]
+      },
+      {
+        "provenance": [
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.016129,
+        "signals": []
       }
     ],
     "searched": [
@@ -287,8 +298,24 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #2: shares 3 identifier(s) with the diff: /stats, stats, toISOString",
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.032258,
+        "signals": [
+          "/stats",
+          "stats",
+          "toISOString"
+        ]
+      },
+      {
+        "provenance": [
+          "lexical #1: shares 5 identifier(s) with the diff: /stats, active_links, generated_at, stats, total_links"
+        ],
         "repo": "acme-analytics",
-        "score": 18.0,
+        "score": 0.016393,
         "signals": [
           "/stats",
           "active_links",
@@ -298,17 +325,11 @@
         ]
       },
       {
-        "repo": "acme-contracts",
-        "score": 4.0,
-        "signals": [
-          "/stats",
-          "stats",
-          "toISOString"
-        ]
-      },
-      {
+        "provenance": [
+          "lexical #3: shares 1 identifier(s) with the diff: toISOString"
+        ],
         "repo": "acme-shared",
-        "score": 1.0,
+        "score": 0.015873,
         "signals": [
           "toISOString"
         ]
@@ -427,11 +448,22 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 1 identifier(s) with the diff: archived"
+        ],
         "repo": "acme-analytics",
-        "score": 2.0,
+        "score": 0.016393,
         "signals": [
           "archived"
         ]
+      },
+      {
+        "provenance": [
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.016129,
+        "signals": []
       }
     ],
     "searched": [
@@ -1003,8 +1035,24 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #3: shares 3 identifier(s) with the diff: code, message, not_found",
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.032002,
+        "signals": [
+          "code",
+          "message",
+          "not_found"
+        ]
+      },
+      {
+        "provenance": [
+          "lexical #1: shares 6 identifier(s) with the diff: available, code, link, message, not_found (+1 more)"
+        ],
         "repo": "acme-gateway",
-        "score": 5.5,
+        "score": 0.016393,
         "signals": [
           "available",
           "code",
@@ -1015,8 +1063,11 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 3 identifier(s) with the diff: code, link, status"
+        ],
         "repo": "acme-analytics",
-        "score": 2.167,
+        "score": 0.016129,
         "signals": [
           "code",
           "link",
@@ -1024,17 +1075,11 @@
         ]
       },
       {
-        "repo": "acme-contracts",
-        "score": 1.833,
-        "signals": [
-          "code",
-          "message",
-          "not_found"
-        ]
-      },
-      {
+        "provenance": [
+          "lexical #3: shares 3 identifier(s) with the diff: code, message, not_found"
+        ],
         "repo": "acme-shared",
-        "score": 1.833,
+        "score": 0.015873,
         "signals": [
           "code",
           "message",
@@ -1042,8 +1087,11 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #5: shares 1 identifier(s) with the diff: link"
+        ],
         "repo": "acme-web",
-        "score": 0.667,
+        "score": 0.015385,
         "signals": [
           "link"
         ]
@@ -1228,22 +1276,32 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 1 identifier(s) with the diff: formatTimestamp",
+          "dependency #1: depends on this repository (acme-shared), directly"
+        ],
         "repo": "acme-web",
-        "score": 4.0,
+        "score": 0.032787,
         "signals": [
           "formatTimestamp"
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: toISOString"
+        ],
         "repo": "acme-api",
-        "score": 1.0,
+        "score": 0.016129,
         "signals": [
           "toISOString"
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: toISOString"
+        ],
         "repo": "acme-contracts",
-        "score": 1.0,
+        "score": 0.016129,
         "signals": [
           "toISOString"
         ]
@@ -1588,8 +1646,22 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: toLocaleString",
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.032258,
+        "signals": [
+          "toLocaleString"
+        ]
+      },
+      {
+        "provenance": [
+          "lexical #1: shares 3 identifier(s) with the diff: https, link, status"
+        ],
         "repo": "acme-analytics",
-        "score": 2.667,
+        "score": 0.016393,
         "signals": [
           "https",
           "link",
@@ -1597,30 +1669,32 @@
         ]
       },
       {
-        "repo": "acme-contracts",
-        "score": 2.0,
-        "signals": [
-          "toLocaleString"
-        ]
-      },
-      {
+        "provenance": [
+          "lexical #3: shares 2 identifier(s) with the diff: link, status"
+        ],
         "repo": "acme-gateway",
-        "score": 1.667,
+        "score": 0.015873,
         "signals": [
           "link",
           "status"
         ]
       },
       {
+        "provenance": [
+          "lexical #4: shares 1 identifier(s) with the diff: https"
+        ],
         "repo": "acme-shared",
-        "score": 1.0,
+        "score": 0.015625,
         "signals": [
           "https"
         ]
       },
       {
+        "provenance": [
+          "lexical #5: shares 1 identifier(s) with the diff: link"
+        ],
         "repo": "acme-web",
-        "score": 0.667,
+        "score": 0.015385,
         "signals": [
           "link"
         ]
@@ -1846,8 +1920,11 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 3 identifier(s) with the diff: Format, RFC1123, body"
+        ],
         "repo": "acme-contracts",
-        "score": 6.5,
+        "score": 0.016393,
         "signals": [
           "Format",
           "RFC1123",
@@ -1855,8 +1932,11 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: body"
+        ],
         "repo": "acme-api",
-        "score": 2.5,
+        "score": 0.016129,
         "signals": [
           "body"
         ]
@@ -2069,7 +2149,16 @@
       ]
     },
     "hits": [],
-    "ranked_repos": [],
+    "ranked_repos": [
+      {
+        "provenance": [
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.016129,
+        "signals": []
+      }
+    ],
     "searched": [
       "count",
       "handleExports",
@@ -2306,8 +2395,11 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 6 identifier(s) with the diff: DEFAULT_LINKS_PER_PAGE, MAX_LINKS_PER_PAGE, Pagination, limits, reporting (+1 more)"
+        ],
         "repo": "acme-shared",
-        "score": 11.0,
+        "score": 0.016393,
         "signals": [
           "DEFAULT_LINKS_PER_PAGE",
           "MAX_LINKS_PER_PAGE",
@@ -2318,15 +2410,21 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: records"
+        ],
         "repo": "acme-gateway",
-        "score": 2.0,
+        "score": 0.016129,
         "signals": [
           "records"
         ]
       },
       {
+        "provenance": [
+          "lexical #3: shares 1 identifier(s) with the diff: reporting"
+        ],
         "repo": "acme-api",
-        "score": 1.0,
+        "score": 0.015873,
         "signals": [
           "reporting"
         ]
@@ -2799,8 +2897,11 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 7 identifier(s) with the diff: TIMESTAMP_FORMAT, datetime, moment, produced, strftime (+2 more)"
+        ],
         "repo": "acme-contracts",
-        "score": 13.0,
+        "score": 0.016393,
         "signals": [
           "TIMESTAMP_FORMAT",
           "datetime",
@@ -2812,16 +2913,22 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 2 identifier(s) with the diff: TIMESTAMP_FORMAT, formatting"
+        ],
         "repo": "acme-shared",
-        "score": 2.0,
+        "score": 0.016129,
         "signals": [
           "TIMESTAMP_FORMAT",
           "formatting"
         ]
       },
       {
+        "provenance": [
+          "lexical #3: shares 1 identifier(s) with the diff: formatting"
+        ],
         "repo": "acme-web",
-        "score": 1.0,
+        "score": 0.015873,
         "signals": [
           "formatting"
         ]
@@ -3396,8 +3503,12 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 3 identifier(s) with the diff: candidate, http, validateUrl",
+          "dependency #2: this repository depends on it (acme-shared), directly"
+        ],
         "repo": "acme-shared",
-        "score": 7.0,
+        "score": 0.032522,
         "signals": [
           "candidate",
           "http",
@@ -3405,24 +3516,33 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 2 identifier(s) with the diff: link, url"
+        ],
         "repo": "acme-api",
-        "score": 2.667,
+        "score": 0.016129,
         "signals": [
           "link",
           "url"
         ]
       },
       {
+        "provenance": [
+          "lexical #3: shares 2 identifier(s) with the diff: http, link"
+        ],
         "repo": "acme-gateway",
-        "score": 1.667,
+        "score": 0.015873,
         "signals": [
           "http",
           "link"
         ]
       },
       {
+        "provenance": [
+          "lexical #4: shares 1 identifier(s) with the diff: link"
+        ],
         "repo": "acme-analytics",
-        "score": 0.667,
+        "score": 0.015625,
         "signals": [
           "link"
         ]
@@ -3809,8 +3929,11 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 7 identifier(s) with the diff: attempt, attempts, delay, last, operation (+2 more)"
+        ],
         "repo": "acme-shared",
-        "score": 20.0,
+        "score": 0.016393,
         "signals": [
           "attempt",
           "attempts",
@@ -3822,15 +3945,21 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: time"
+        ],
         "repo": "acme-contracts",
-        "score": 1.0,
+        "score": 0.016129,
         "signals": [
           "time"
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 1 identifier(s) with the diff: time"
+        ],
         "repo": "acme-web",
-        "score": 1.0,
+        "score": 0.016129,
         "signals": [
           "time"
         ]
@@ -3960,7 +4089,16 @@
       ]
     },
     "hits": [],
-    "ranked_repos": [],
+    "ranked_repos": [
+      {
+        "provenance": [
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.016129,
+        "signals": []
+      }
+    ],
     "searched": [
       "express"
     ],
@@ -4380,16 +4518,23 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 2 identifier(s) with the diff: See, the",
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
         "repo": "acme-contracts",
-        "score": 2.4,
+        "score": 0.032522,
         "signals": [
           "See",
           "the"
         ]
       },
       {
+        "provenance": [
+          "lexical #1: shares 3 identifier(s) with the diff: dependencies, src, the"
+        ],
         "repo": "acme-web",
-        "score": 2.4,
+        "score": 0.016393,
         "signals": [
           "dependencies",
           "src",
@@ -4397,24 +4542,33 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #3: shares 2 identifier(s) with the diff: dependencies, the"
+        ],
         "repo": "acme-analytics",
-        "score": 1.4,
+        "score": 0.015873,
         "signals": [
           "dependencies",
           "the"
         ]
       },
       {
+        "provenance": [
+          "lexical #3: shares 2 identifier(s) with the diff: src, the"
+        ],
         "repo": "acme-shared",
-        "score": 1.4,
+        "score": 0.015873,
         "signals": [
           "src",
           "the"
         ]
       },
       {
+        "provenance": [
+          "lexical #5: shares 1 identifier(s) with the diff: the"
+        ],
         "repo": "acme-gateway",
-        "score": 0.4,
+        "score": 0.015385,
         "signals": [
           "the"
         ]
@@ -4680,7 +4834,16 @@
       ]
     },
     "hits": [],
-    "ranked_repos": [],
+    "ranked_repos": [
+      {
+        "provenance": [
+          "dependency #2: this repository depends on it (@acme/contracts), directly"
+        ],
+        "repo": "acme-contracts",
+        "score": 0.016129,
+        "signals": []
+      }
+    ],
     "searched": [
       "canonicalizeShortCode",
       "normalizeShortCode"
@@ -5087,8 +5250,11 @@
     ],
     "ranked_repos": [
       {
+        "provenance": [
+          "lexical #1: shares 3 identifier(s) with the diff: api, links, url"
+        ],
         "repo": "acme-api",
-        "score": 3.167,
+        "score": 0.016393,
         "signals": [
           "api",
           "links",
@@ -5096,24 +5262,41 @@
         ]
       },
       {
+        "provenance": [
+          "lexical #2: shares 2 identifier(s) with the diff: links, view"
+        ],
         "repo": "acme-gateway",
-        "score": 2.5,
+        "score": 0.016129,
         "signals": [
           "links",
           "view"
         ]
       },
       {
+        "provenance": [
+          "dependency #2: this repository depends on it (acme-shared), directly"
+        ],
+        "repo": "acme-shared",
+        "score": 0.016129,
+        "signals": []
+      },
+      {
+        "provenance": [
+          "lexical #3: shares 2 identifier(s) with the diff: api, links"
+        ],
         "repo": "acme-analytics",
-        "score": 1.167,
+        "score": 0.015873,
         "signals": [
           "api",
           "links"
         ]
       },
       {
+        "provenance": [
+          "lexical #3: shares 2 identifier(s) with the diff: api, links"
+        ],
         "repo": "acme-contracts",
-        "score": 1.167,
+        "score": 0.015873,
         "signals": [
           "api",
           "links"

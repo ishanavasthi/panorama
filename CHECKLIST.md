@@ -191,22 +191,68 @@ per-case ranks — and the golden snapshot matches field for field.
 
 ---
 
-## V2.4 — Dependency-graph channel
+## V2.4 — Dependency-graph channel · **DONE, with one exit criterion missed**
 
-- [ ] Manifest parsing per language pack across the workspace
-- [ ] `declared_package_name -> repo` map (never repo-name string matching)
-- [ ] Edge construction + direction
-- [ ] Ranking: direct dependent above transitive
-- [ ] Test: declared name differs from directory name
-- [ ] Test: dependency outside the workspace
-- [ ] Test: malformed manifest · missing manifest · dependency cycle
-- [ ] Test: monorepo-style manifest with workspaces
-- [ ] Test: constraint #2 — no fixture tokens in the module
-- [ ] Measured: recall@3 improves over V2.2 baseline
-- [ ] Measured: the S4 convention case now ranks its target first
-- [ ] Measured: no case regressed
+- [x] Manifest parsing per language pack across the workspace
+- [x] `declared_package_name -> repo` map (never repo-name string matching)
+- [x] Edge construction + direction
+- [x] Ranking: direct dependent above transitive, and a **provider never takes
+      rank 1** — rank encodes the kind of edge, not a position among whatever
+      this channel happened to find
+- [x] Reciprocal rank fusion across channels (`k=60`) — **landed here rather
+      than in V2.7**, because a channel that is not fused changes no number, and
+      V2.4's exit criteria are all measurements
+- [x] Per-repository provenance, rendered into the model's prompt
+- [x] Test: declared name differs from directory name
+- [x] Test: dependency outside the workspace, recorded rather than dropped
+- [x] Test: malformed manifest · missing manifest · dependency cycle (2- and
+      3-repository) · duplicate declared name · self-dependency
+- [x] Test: monorepo-style manifest with workspaces creates no phantom edges
+- [x] Test: constraint #2 — no fixture tokens in the module
+- [x] 56 new tests; full suite 608 green; ruff clean
+- [x] Test: fusion — single channel · agreement · silence · total disagreement ·
+      score precision · determinism
+- [x] Measured: **recall@3 improves, 0.917 → 1.000**
+- [x] Measured: **the S4 convention case now ranks its target first** (2 → 1)
+- [ ] Measured: no case regressed — **not met.** Two contract-break cases moved
+      from rank 1 to rank 2. Cause identified, recorded below, and accepted.
 
-**Exit:** all three measurements recorded.
+**Exit:** two of three met; the third missed for a understood structural reason
+rather than a defect. Recorded in `DECISIONS.md` rather than worked around.
+
+### Findings from V2.4
+
+- **The load-bearing zero is gone, by exactly the intended mechanism.**
+  `convention-unversioned-endpoint` scored nothing at the V2.2 baseline because
+  the diff and the document it violates share no vocabulary at all — the
+  violation is an *absence*. It now ranks its target **first**, found purely by
+  a declared dependency edge. This is the single result V2.4 existed to produce.
+- **recall@3 is 1.000.** Every positive case now has its target in the top
+  three. MRR rose 0.833 → 0.875.
+- **Two cases regressed, and the cause is the trade-off RRF was chosen with.**
+  `contract-break-removed-endpoint` and `contract-break-status-code` each fell
+  from rank 1 to rank 2. In both, the conventions repository is lexical #2 *and*
+  a declared dependency of the pull request's repository, so it collects two
+  votes and overtakes a target that had one. Fusion by rank discards magnitude,
+  so it cannot see that the demoted target led lexically by 18.0 to 4.0 in one
+  case and by a hair in the other. Both look identical to it.
+- **No unfitted knob fixes this**, which is why it was accepted rather than
+  tuned away. Lowering `k` does not help: two second places beat one first place
+  at every value. Using `max` instead of `sum` fixes these two cases and
+  immediately un-fixes the convention case that motivated the milestone. The
+  only remaining lever is per-channel weights, and the sole data available to
+  fit them is the corpus they would then be scored against.
+- **The dependency channel deliberately produces no file-level leads.** A
+  manifest edge says *which* repository, never *where* in it. Emitting the
+  manifest line as a lead would be true and useless — and it would make every
+  negative control in the corpus surface a lead for a change that touched
+  nothing. All four scorable negatives still produce zero leads.
+- **The channel is diff-blind, which is its real cost.** It votes identically
+  for every pull request in a repository, including ones that change nothing
+  consequential. That is what produced the two demotions, and it is pinned by a
+  test so it stays a known property rather than a surprise.
+
+---
 
 ---
 

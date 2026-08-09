@@ -522,15 +522,17 @@ def test_run_offline_scores_every_checked_in_case(org):
     assert len(scores) == len(real_cases())
 
 
-#: Cases the V2.2 corpus expects retrieval to fail, with the reason. These are
-#: not tolerated failures — they are *designed* ones, each pinned to the
-#: milestone meant to fix it. A case leaving this set is progress; a case
-#: entering it without a note is a regression the baseline gate will catch.
-EXPECTED_RETRIEVAL_FAILURES = {
-    # Absence has no lexical footprint: the diff and the convention it breaks
-    # share no vocabulary at all. Only the manifest edge can find it (V2.4).
-    "convention-unversioned-endpoint",
-}
+#: Cases the corpus expects retrieval to fail, with the reason. These are not
+#: tolerated failures — they are *designed* ones, each pinned to the milestone
+#: meant to fix it. A case leaving this set is progress; a case entering it
+#: without a note is a regression the baseline gate will catch.
+#:
+#: Empty since V2.4. It held one entry through V2.2 and V2.3:
+#: `convention-unversioned-endpoint`, where the diff and the convention it
+#: violates share no vocabulary at all because the violation is an *absence*.
+#: The dependency-graph channel now finds it through a declared manifest edge,
+#: which is the single result that milestone existed to produce.
+EXPECTED_RETRIEVAL_FAILURES: set[str] = set()
 
 
 def test_checked_in_cases_pass_retrieval_except_the_designed_failures(org):

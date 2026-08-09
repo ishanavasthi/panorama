@@ -13,16 +13,18 @@ from pathlib import Path
 import pytest
 
 from panorama.channels import (
+    RRF_K,
     ChannelResult,
     Hit,
     RankedRepo,
     RetrievalChannel,
     competition_ranked,
+    fuse,
 )
 from panorama.evaluation.cases import load_cases
 from panorama.evaluation.runner import _load_case_pr
 from panorama.fixtures import bootstrap as bootstrap_fixtures
-from panorama.retrieval import ACTIVE_CHANNELS, LexicalChannel
+from panorama.retrieval import LexicalChannel, active_channels
 
 
 def justify_nothing(repo: str, score: float) -> str:
@@ -124,6 +126,101 @@ def test_results_are_immutable() -> None:
 
 
 # ---------------------------------------------------------------------------
+# fusion
+# ---------------------------------------------------------------------------
+
+
+def result_of(channel: str, *repos: str) -> ChannelResult:
+    """A channel result ranking ``repos`` in the order given."""
+    return ChannelResult(
+        channel=channel,
+        ranked=tuple(
+            RankedRepo(repo=repo, rank=i, score=1.0 / i, justification=f"{channel} says so")
+            for i, repo in enumerate(repos, start=1)
+        ),
+    )
+
+
+def test_a_single_channel_fuses_to_its_own_order() -> None:
+    fused = fuse([result_of("one", "a", "b", "c")])
+    assert [f.repo for f in fused] == ["a", "b", "c"]
+
+
+def test_channels_that_agree_reinforce() -> None:
+    fused = fuse([result_of("one", "a", "b"), result_of("two", "a", "b")])
+    assert [f.repo for f in fused] == ["a", "b"]
+    # Scores are rounded for legibility, so compare with an absolute tolerance
+    # rather than a relative one.
+    assert fused[0].score == pytest.approx(2 / (RRF_K + 1), abs=1e-6)
+
+
+def test_a_silent_channel_changes_nothing() -> None:
+    """The property that makes abstention safe.
+
+    A channel with no opinion must not be able to alter another channel's
+    ordering, or every silent channel would be a thumb on the scale.
+    """
+    alone = fuse([result_of("one", "a", "b")])
+    with_silence = fuse([result_of("one", "a", "b"), ChannelResult(channel="quiet")])
+    assert [f.repo for f in alone] == [f.repo for f in with_silence]
+    assert [f.score for f in alone] == [f.score for f in with_silence]
+
+
+def test_total_disagreement_ties() -> None:
+    """Two channels each certain about a different repository cannot be
+    resolved by rank alone — and the tie says exactly that."""
+    fused = fuse([result_of("one", "a"), result_of("two", "b")])
+    assert fused[0].score == fused[1].score
+
+
+def test_two_second_places_outweigh_one_first() -> None:
+    """The cost of rank fusion, pinned as a test rather than left as a surprise.
+
+    RRF discards magnitude: a channel that is overwhelmingly certain about its
+    top result cannot say so. Agreement between two channels therefore beats one
+    channel's strong conviction, however wide its margin was. This is a real
+    effect on the corpus, not a hypothetical, and it is the concrete input to
+    any future tuning.
+    """
+    fused = fuse([result_of("one", "winner", "shared"), result_of("two", "other", "shared")])
+    assert fused[0].repo == "shared"
+
+
+def test_a_repo_ranked_by_nobody_does_not_appear() -> None:
+    fused = fuse([result_of("one", "a")])
+    assert [f.repo for f in fused] == ["a"]
+
+
+def test_fusion_of_nothing_is_nothing() -> None:
+    assert fuse([]) == []
+    assert fuse([ChannelResult(channel="quiet")]) == []
+
+
+def test_provenance_names_every_channel_that_voted() -> None:
+    fused = fuse([result_of("one", "a"), result_of("two", "a")])
+    provenance = fused[0].provenance
+    assert len(provenance) == 2
+    assert any(line.startswith("one #1") for line in provenance)
+    assert any(line.startswith("two #1") for line in provenance)
+
+
+def test_fused_scores_keep_enough_precision_to_separate_adjacent_ranks() -> None:
+    """Rounding is a real hazard here, not a cosmetic choice.
+
+    Adjacent RRF scores differ in the fourth significant figure, so rounding
+    too aggressively would collapse rank 1 and rank 2 into a tie and silently
+    destroy the ordering the whole channel exists to produce.
+    """
+    fused = fuse([result_of("one", "a", "b")])
+    assert fused[0].score != fused[1].score
+
+
+def test_fusion_order_is_deterministic_under_ties() -> None:
+    fused = fuse([result_of("one", "zebra"), result_of("two", "alpha")])
+    assert [f.repo for f in fused] == ["alpha", "zebra"]
+
+
+# ---------------------------------------------------------------------------
 # the lexical channel as an implementation
 # ---------------------------------------------------------------------------
 
@@ -145,22 +242,43 @@ def test_the_lexical_channel_satisfies_the_protocol() -> None:
 
 
 def test_active_channels_all_satisfy_the_protocol() -> None:
-    assert ACTIVE_CHANNELS
-    for channel in ACTIVE_CHANNELS:
+    assert active_channels()
+    for channel in active_channels():
         assert isinstance(channel, RetrievalChannel)
 
 
 def test_channel_names_are_unique() -> None:
-    names = [c.name for c in ACTIVE_CHANNELS]
+    names = [c.name for c in active_channels()]
     assert len(names) == len(set(names))
 
 
-def test_the_channel_view_agrees_with_the_pipeline_view(org: Path) -> None:
-    """Both views come from one computation, and this proves they stay agreed.
+def test_the_pipeline_ranking_is_exactly_the_union_of_its_channels(org: Path) -> None:
+    """Fusion must neither invent a repository nor lose one.
 
-    The pipeline consumes `RetrievalResult`; provenance and fusion consume
-    `ChannelResult`. If those ever drift, the report would explain a ranking
-    the review did not actually use.
+    Inventing would mean the report explaining a ranking no channel produced;
+    losing would mean a channel doing work that never reaches the review. Both
+    are silent failures, so both are pinned.
+    """
+    from panorama.retrieval import active_channels, retrieve
+
+    case = case_by_id("contract-break-field-rename")
+    pull_request, workspace = _load_case_pr(case, org)
+
+    pipeline = retrieve(pull_request, workspace)
+    voted = {
+        entry.repo
+        for channel in active_channels()
+        for entry in channel.rank(pull_request, workspace).ranked
+    }
+
+    assert {r.repo for r in pipeline.ranked_repos} == voted
+
+
+def test_file_level_leads_come_only_from_the_lexical_channel(org: Path) -> None:
+    """The structural channels say *which* repository, never *where* in it.
+
+    If a manifest edge produced a lead, every negative control in the corpus
+    would surface one for a change that touched nothing relevant.
     """
     from panorama.retrieval import retrieve
 
@@ -168,12 +286,41 @@ def test_the_channel_view_agrees_with_the_pipeline_view(org: Path) -> None:
     pull_request, workspace = _load_case_pr(case, org)
 
     pipeline = retrieve(pull_request, workspace)
-    channel = LexicalChannel().rank(pull_request, workspace)
+    lexical = LexicalChannel().rank(pull_request, workspace)
 
-    assert [r.repo for r in pipeline.ranked_repos] == list(channel.repos)
-    assert [r.score for r in pipeline.ranked_repos] == [r.score for r in channel.ranked]
-    assert list(pipeline.hits) == list(channel.hits)
-    assert pipeline.truncated == channel.truncated
+    assert list(pipeline.hits) == list(lexical.hits)
+    assert pipeline.truncated == lexical.truncated
+
+
+def test_every_ranked_repository_can_say_why_it_is_there(org: Path) -> None:
+    from panorama.retrieval import retrieve
+
+    case = case_by_id("convention-endpoint-drift")
+    pull_request, workspace = _load_case_pr(case, org)
+
+    for entry in retrieve(pull_request, workspace).ranked_repos:
+        assert entry.provenance, f"{entry.repo} appeared with no explanation"
+        assert all(":" in line for line in entry.provenance)
+
+
+def test_a_repository_found_only_structurally_still_ranks(org: Path) -> None:
+    """The whole point of the channel, end to end.
+
+    This case's diff shares no vocabulary at all with the document it violates,
+    because the violation is an *absence*. Lexical retrieval finds nothing; the
+    declared dependency edge finds it anyway.
+    """
+    from panorama.retrieval import retrieve
+
+    case = case_by_id("convention-unversioned-endpoint")
+    pull_request, workspace = _load_case_pr(case, org)
+
+    lexical = LexicalChannel().rank(pull_request, workspace)
+    pipeline = retrieve(pull_request, workspace)
+
+    assert lexical.ranked == (), "the lexical channel is supposed to be blind here"
+    assert [r.repo for r in pipeline.ranked_repos] == list(case.target_repos)
+    assert "dependency" in pipeline.ranked_repos[0].provenance[0]
 
 
 def test_the_justification_names_the_matched_tokens(org: Path) -> None:

@@ -8,11 +8,11 @@
     "n_positive": 12,
     "recall_at_1": 0.75,
     "recall_at_1_outright": 0.75,
-    "recall_at_k": 0.9166666666666666,
-    "mrr": 0.8333333333333334,
+    "recall_at_k": 1,
+    "mrr": 0.875,
     "file_recall": 1.0,
     "n_forbidden_violations": 0,
-    "n_failed": 1
+    "n_failed": 0
   },
   "cases": {
     "contract-break-field-rename": {
@@ -29,10 +29,10 @@
     "contract-break-removed-endpoint": {
       "scorable": true,
       "expect_finding": true,
-      "rank": 1,
+      "rank": 2,
       "tied_with": 1,
-      "recall_at_1": true,
-      "recall_at_1_outright": true,
+      "recall_at_1": false,
+      "recall_at_1_outright": false,
       "recall_at_k": true,
       "file_recall": 1.0,
       "passed": true
@@ -51,10 +51,10 @@
     "contract-break-status-code": {
       "scorable": true,
       "expect_finding": true,
-      "rank": 1,
+      "rank": 2,
       "tied_with": 1,
-      "recall_at_1": true,
-      "recall_at_1_outright": true,
+      "recall_at_1": false,
+      "recall_at_1_outright": false,
       "recall_at_k": true,
       "file_recall": 1.0,
       "passed": true
@@ -73,10 +73,10 @@
     "convention-endpoint-drift": {
       "scorable": true,
       "expect_finding": true,
-      "rank": 2,
+      "rank": 1,
       "tied_with": 1,
-      "recall_at_1": false,
-      "recall_at_1_outright": false,
+      "recall_at_1": true,
+      "recall_at_1_outright": true,
       "recall_at_k": true,
       "file_recall": null,
       "passed": true
@@ -95,13 +95,13 @@
     "convention-unversioned-endpoint": {
       "scorable": true,
       "expect_finding": true,
-      "rank": null,
-      "tied_with": 0,
-      "recall_at_1": false,
-      "recall_at_1_outright": false,
-      "recall_at_k": false,
+      "rank": 1,
+      "tied_with": 1,
+      "recall_at_1": true,
+      "recall_at_1_outright": true,
+      "recall_at_k": true,
       "file_recall": null,
-      "passed": false
+      "passed": true
     },
     "cross-repo-conflict-page-limit": {
       "scorable": true,

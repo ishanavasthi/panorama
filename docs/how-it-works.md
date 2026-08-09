@@ -128,15 +128,33 @@ only find a link that shares *vocabulary*. A convention violated by an
 boundary (`format_timestamp` versus `formatTimestamp`) is two different
 strings. No amount of tuning fixes either.
 
-**The structural channels** (in progress) answer what vocabulary cannot:
+**The dependency channel** (live) answers what vocabulary cannot. Every
+repository already declares the name it publishes under and the names it depends
+on. An edge exists when one repository depends on a name another declares —
+resolved **declared name to declared name**, never by matching a dependency
+string against a directory, because the folder and the published package are
+routinely different things in a real organisation.
 
-- *Dependency graph*: which repositories declare a dependency on which, resolved
-  **declared name to declared name**. A repository that depends on the one being
-  changed is a candidate consumer by construction, regardless of whether the
-  diff mentions it.
-- *Symbol index*: what each repository exports and imports, so "does anything
-  consume this" becomes a lookup rather than a guess.
-- *Co-change coupling* (stretch): what historically changes together.
+Its ranking encodes *what kind of edge* a repository has, not where it happened
+to land among this channel's own findings:
+
+1. a **direct dependent** — something that can be *broken* by this change;
+2. a **direct dependency** — where shared helpers and conventions live, and
+   which can only be duplicated or contradicted, never broken;
+3. the same two, one hop further out.
+
+So a provider never occupies rank 1, whether or not any consumer exists. That
+keeps a rank meaning the same thing across runs, which is what makes fusing it
+with another channel's ranks meaningful at all.
+
+Two properties are worth knowing before trusting it. It is **blind to the diff**:
+it votes identically for every pull request in a repository, whatever the change
+does. And it produces **no file-level leads** — a manifest edge tells you which
+repository matters, never where in it.
+
+**Still to come:** a *symbol index*, so "does anything actually consume this"
+becomes a lookup rather than a guess; and, as a stretch, *co-change coupling*
+mined from history.
 
 ### Why rankings are fused rather than summed
 
@@ -149,10 +167,17 @@ So channels are combined by **reciprocal rank fusion**: each repository's score
 is the sum of `1/(k + rank)` across the channels that ranked it. One constant,
 no fitting, robust when a channel is silent, and fully explainable — the report
 can say "ranked #1 by dependency edge, #3 by lexical overlap, not seen by the
-symbol index". The trade-off is that fusion discards *magnitude*: a channel that
-is overwhelmingly certain cannot express that. Deliberate — some ceiling traded
-for a lot of robustness, and the harness makes it a testable choice rather than
-a permanent one.
+symbol index".
+
+The trade-off is that fusion discards *magnitude*. A channel that is
+overwhelmingly certain about its top result cannot say so, so **two second
+places outweigh one first place** regardless of how far ahead that first place
+was. This is not hypothetical: it is measured on the corpus, where two cases
+have their true target displaced by a repository that two channels each rank
+second. It is a deliberate trade of some ceiling for a lot of robustness, and
+the harness is what keeps it a testable choice rather than a permanent one.
+`DECISIONS.md` records why every alternative that avoids fitted weights was
+rejected.
 
 ### Silence is a legal answer
 
@@ -170,6 +195,17 @@ finds is ever cited directly. The prompt says so explicitly, and validation
 enforces it independently. This matters because retrieval is heuristic by
 nature, and a heuristic feeding citations directly would be a machine for
 generating confident nonsense.
+
+---
+
+### What retrieval currently achieves
+
+On the labelled corpus, every positive case has its target repository inside the
+top three, and the two hardest cases — a convention violated by an absence, and
+the case that had merely *tied* for first since V1 — both rank their target
+first. The cost is visible too: two contract-break cases have their target
+displaced to second by the magnitude-blindness described above. The numbers are
+re-measured on every commit and a drop that nobody explains does not land.
 
 ---
 

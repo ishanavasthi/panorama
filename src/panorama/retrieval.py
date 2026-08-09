@@ -36,7 +36,13 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from panorama.channels import ChannelResult, Hit, competition_ranked
+from panorama.channels import (
+    ChannelResult,
+    Hit,
+    RetrievalChannel,
+    competition_ranked,
+    fuse,
+)
 from panorama.errors import PreflightError
 from panorama.intake import PullRequest
 from panorama.workspace import Workspace
@@ -47,6 +53,7 @@ __all__ = [
     "RepoRelevance",
     "RetrievalResult",
     "Signal",
+    "active_channels",
     "extract_signals",
     "filter_diff",
     "retrieve",
@@ -142,11 +149,20 @@ class Signal:
 
 @dataclass
 class RepoRelevance:
-    """A sibling repository ranked by how strongly the diff points at it."""
+    """A sibling repository ranked by how strongly the change points at it.
+
+    ``score`` is the fused score across every channel that ranked this
+    repository: comparable within one run, meaningless between runs.
+    ``signals`` are the lexical tokens that matched, kept separately because
+    they are the part a reader can go and check by eye. ``provenance`` is one
+    line per channel — the answer to "why is this repository on the list at
+    all", which a bare number cannot give.
+    """
 
     repo: str
     score: float
     signals: list[str] = field(default_factory=list)
+    provenance: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -438,44 +454,78 @@ class LexicalChannel:
 
     def rank(self, pr: PullRequest, workspace: Workspace) -> ChannelResult:
         """The channel-interface view of the same search."""
-        found = self.search(pr, workspace)
-        signals_by_repo = {entry.repo: entry.signals for entry in found.ranked}
-
-        def justify(repo: str, _score: float) -> str:
-            tokens = signals_by_repo.get(repo, [])
-            shown = ", ".join(tokens[:_MAX_JUSTIFIED_TOKENS])
-            extra = len(tokens) - _MAX_JUSTIFIED_TOKENS
-            if extra > 0:
-                shown = f"{shown} (+{extra} more)"
-            return f"shares {len(tokens)} identifier(s) with the diff: {shown}"
-
-        return ChannelResult(
-            channel=self.name,
-            ranked=competition_ranked(
-                [(entry.repo, entry.score) for entry in found.ranked], justify=justify
-            ),
-            hits=tuple(found.hits),
-            notes=(
-                ("hit cap reached; the search stopped early",) if found.truncated else ()
-            ),
-            truncated=found.truncated,
-        )
+        return _lexical_result(self, self.search(pr, workspace))
 
 
-#: The channels that contribute to a review, in a stable order. One today; the
-#: structural channels join it in V2.4 and V2.5, and V2.7 replaces the identity
-#: composition below with reciprocal rank fusion across all of them.
-ACTIVE_CHANNELS: tuple[LexicalChannel, ...] = (LexicalChannel(),)
+def _lexical_result(channel: LexicalChannel, found: LexicalPass) -> ChannelResult:
+    """Shape one lexical search as a channel result.
+
+    Free-standing so the composition point can reuse a search it has already
+    paid for rather than running every `git grep` a second time.
+    """
+    signals_by_repo = {entry.repo: entry.signals for entry in found.ranked}
+
+    def justify(repo: str, _score: float) -> str:
+        tokens = signals_by_repo.get(repo, [])
+        shown = ", ".join(tokens[:_MAX_JUSTIFIED_TOKENS])
+        extra = len(tokens) - _MAX_JUSTIFIED_TOKENS
+        if extra > 0:
+            shown = f"{shown} (+{extra} more)"
+        return f"shares {len(tokens)} identifier(s) with the diff: {shown}"
+
+    return ChannelResult(
+        channel=channel.name,
+        ranked=competition_ranked(
+            [(entry.repo, entry.score) for entry in found.ranked], justify=justify
+        ),
+        hits=tuple(found.hits),
+        notes=("hit cap reached; the search stopped early",) if found.truncated else (),
+        truncated=found.truncated,
+    )
+
+
+def active_channels() -> tuple[RetrievalChannel, ...]:
+    """The channels that contribute to a review, in a stable order.
+
+    A function rather than a constant so the import graph stays one-directional:
+    each channel imports the shared interface, and only this composition point
+    imports the channels.
+    """
+    from panorama.dependencies import DependencyChannel
+
+    return (LexicalChannel(), DependencyChannel())
 
 
 def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
-    """Rank sibling repositories by how strongly the diff points at them.
+    """Rank sibling repositories by how strongly the change points at them.
 
-    The composition point. With a single channel this is the identity, which is
-    exactly what the equivalence test pins down: V2.3 introduces the *seam*
-    without moving anything through it.
+    The composition point: every channel ranks independently, and their
+    rankings are fused. The lexical channel additionally supplies the
+    file-level leads, because it is the only one that matches *lines* — the
+    structural channels say which repository matters, not where in it.
     """
-    lexical = LexicalChannel().search(pr, workspace)
+    lexical_channel = LexicalChannel()
+    lexical = lexical_channel.search(pr, workspace)
+    signals_by_repo = {entry.repo: entry.signals for entry in lexical.ranked}
+
+    results = [
+        channel.rank(pr, workspace)
+        for channel in active_channels()
+        # The lexical pass has already run; re-running it would double the
+        # `git grep` cost of every review to produce the same answer.
+        if channel.name != lexical_channel.name
+    ]
+    results.insert(0, _lexical_result(lexical_channel, lexical))
+
+    ranked = [
+        RepoRelevance(
+            repo=fused.repo,
+            score=fused.score,
+            signals=signals_by_repo.get(fused.repo, []),
+            provenance=list(fused.provenance),
+        )
+        for fused in fuse(results)
+    ]
 
     convention_docs = {
         entry.name: entry.convention_docs
@@ -487,7 +537,7 @@ def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
         signals=lexical.signals,
         searched=lexical.searched,
         hits=lexical.hits,
-        ranked_repos=lexical.ranked,
+        ranked_repos=ranked,
         convention_docs=convention_docs,
         truncated=lexical.truncated,
     )

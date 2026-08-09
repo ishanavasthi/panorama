@@ -125,6 +125,88 @@ class RetrievalChannel(Protocol):
         ...
 
 
+#: The standard reciprocal-rank-fusion constant. It is not tuned and should not
+#: be: the only data available to fit it is an 18-case corpus, and a constant
+#: fitted on 18 cases is overfitting with extra steps.
+RRF_K = 60
+
+
+@dataclass(frozen=True)
+class ChannelVote:
+    """One channel's opinion about one repository, kept for the report."""
+
+    channel: str
+    rank: int
+    justification: str
+
+
+@dataclass(frozen=True)
+class FusedRepo:
+    """A repository after every channel has had its say."""
+
+    repo: str
+    score: float
+    votes: tuple[ChannelVote, ...]
+
+    @property
+    def provenance(self) -> tuple[str, ...]:
+        """One readable line per channel that ranked this repository.
+
+        This is what lets the report answer "why was this repository even
+        looked at" — and a ranking nobody can interrogate is a ranking nobody
+        should trust.
+        """
+        return tuple(
+            f"{vote.channel} #{vote.rank}: {vote.justification}" for vote in self.votes
+        )
+
+
+def fuse(results: list[ChannelResult], *, k: int = RRF_K) -> list[FusedRepo]:
+    """Combine channel rankings by reciprocal rank fusion.
+
+    Each repository scores the sum of ``1 / (k + rank)`` over the channels that
+    ranked it. Channels that did not rank it contribute nothing — they are
+    silent about it, which is not the same as voting against it.
+
+    **Why fusion by rank rather than by score.** Channels measure incomparable
+    things: a lexical overlap score and a dependency-edge distance share no
+    unit. Combining them numerically would mean choosing weights, and the only
+    data available to choose them from is the evaluation corpus, which is small
+    enough that any weight fitted on it describes the corpus rather than the
+    problem. Rank fusion needs no weights, survives a channel being silent, and
+    stays explainable.
+
+    **What it costs.** Fusion throws away *magnitude*. A channel that is
+    overwhelmingly confident about its top result cannot say so — first place is
+    first place. The consequence is real and shows up as two second-places
+    outweighing one first: agreement between channels is rewarded, sometimes
+    more than one channel's strong conviction deserves. That is a deliberate
+    trade of some ceiling for a lot of robustness, and the evaluation harness is
+    what keeps it a testable choice rather than a permanent one.
+
+    Ties break by repository name so the order is deterministic; the *rank* a
+    repository is given downstream still shares with everything it ties with.
+    """
+    scores: dict[str, float] = {}
+    votes: dict[str, list[ChannelVote]] = {}
+
+    for result in results:
+        for entry in result.ranked:
+            scores[entry.repo] = scores.get(entry.repo, 0.0) + 1.0 / (k + entry.rank)
+            votes.setdefault(entry.repo, []).append(
+                ChannelVote(
+                    channel=result.channel,
+                    rank=entry.rank,
+                    justification=entry.justification,
+                )
+            )
+
+    return [
+        FusedRepo(repo=repo, score=round(score, 6), votes=tuple(votes[repo]))
+        for repo, score in sorted(scores.items(), key=lambda pair: (-pair[1], pair[0]))
+    ]
+
+
 def competition_ranked(
     scored: list[tuple[str, float]],
     *,

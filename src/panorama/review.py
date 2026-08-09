@@ -75,12 +75,20 @@ def _retrieval_section(retrieval: RetrievalResult, pr_repo: str) -> str:
     ]
 
     if retrieval.ranked_repos:
-        lines.append("Sibling repositories ranked by overlap with the diff:")
+        lines.append("Sibling repositories ranked by relevance to this change:")
         for rank in retrieval.ranked_repos:
-            signals = ", ".join(rank.signals)
-            lines.append(f"- {rank.repo} (score {rank.score}) via: {signals}")
+            lines.append(f"- {rank.repo}")
+            # Say *why* each repository is on the list. A repository surfaced by
+            # a declared dependency rather than by shared vocabulary is a
+            # genuinely different kind of lead, and one worth reading
+            # differently — there may be no matching text in it at all.
+            for line in rank.provenance:
+                lines.append(f"    - {line}")
     else:
-        lines.append("No sibling repository shared any identifier with the diff.")
+        lines.append(
+            "No sibling repository shared any identifier with the diff, and no "
+            "declared dependency connects one to this repository."
+        )
 
     if retrieval.hits:
         lines.append("")
