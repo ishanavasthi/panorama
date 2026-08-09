@@ -1523,3 +1523,81 @@ exist, waiting for each to fail. The clone step had always been injected; the
 new manifest step made the omission obvious. Injecting it too brought them to 9
 seconds and made them genuinely offline again — which they had been claiming to
 be in their own docstring.
+
+## V2.9 — reviewing without being asked
+
+### Why this is a poller
+
+The obvious design for automatic review is a hosted GitHub App: webhook
+endpoint, event handler, queue. It is not available here, and the reason is
+structural rather than a matter of effort. A hosted service has no Claude Code
+subscription; that subscription is an interactive credential belonging to a
+person and a machine. It cannot go into a serverless function, and putting one
+there would break both "no API key" and "credentials stay with the tool that
+owns them" at once.
+
+So automation is a **pull** model: a local process that polls for pull requests
+which are new or whose head commit moved. No inbound network, no public URL, no
+tunnel, no runner registration, nothing to operate. The honest cost is that
+reviews lag by the poll interval and only happen while someone's machine is
+awake. That is a consequence of the constraint, not something to engineer away.
+
+### The safety posture
+
+An unattended process that writes to a shared repository is a different kind of
+risk from a command someone runs and reads, so the dangerous version has to be
+asked for explicitly and more than once.
+
+**`--post` alone is refused, not ignored.** It additionally requires naming
+every repository the watcher may write to. A process that comments on anything
+it finds is a mistake waiting for a bad night. The allowlist gates *writing*,
+not reviewing — an unlisted repository is still reviewed in dry run, which is
+useful and still safe.
+
+**The hourly cap is counted from disk.** In memory it would be worthless
+exactly when it matters: a crash-looping watcher would refill its own budget on
+every restart, which is the scenario the cap exists for.
+
+**The cursor advances only after a review completes.** Advancing it first would
+let a crash mid-review silently mark a pull request done, and nothing would ever
+look at it again — a failure that hides itself.
+
+**Drafts and bot authors are skipped by default.** A bot reviewing a bot's pull
+request is a machine talking to itself, and it is the easiest way to build a
+review loop.
+
+**Workspace-lock contention is not an error.** The other holder is usually a
+human running a review by hand, so the watcher treats it as "try again next
+poll" rather than failing.
+
+### ETags: dropped for a reason, not skipped
+
+The plan asked for conditional requests. Building the lister made it clear they
+would not pay for themselves: one GraphQL query covers an entire owner per poll,
+while the conditional alternative is a REST call per repository with an ETag
+each — trading one request for dozens in order to make most of them free.
+
+The `PollResult` type still carries an ETag and the watcher still sends it back,
+because the interface should not foreclose a lister that benefits from one, and
+because the "nothing changed" path is worth having tested either way. That path
+holds one trap worth naming: **a 304 is not an empty organisation.** Conflating
+"nothing changed" with "no open pull requests" would quietly discard the whole
+cursor mechanism, so the two are distinguished explicitly.
+
+### Untrusted payloads
+
+A pull request with a null author, a string where a number belongs, or no head
+commit at all is dropped rather than raising. Forge responses are external data,
+and one unusual pull request must not be able to stop an unattended process. In
+the same spirit, `gh`'s stderr is never echoed — it is the likeliest place for a
+token hint or an operator's path to appear — so failures are classified into
+"slow down", "retry shortly", or "report this" and re-authored locally.
+
+### What is not done
+
+The two live checks — push to a seeded pull request and see exactly one review
+appear, push again and see exactly one *update* rather than a second comment —
+need `panorama demo --github` against a real account, which creates private
+repositories. That is an outward-facing action, it is never run automatically,
+and it waits for the maintainer. Everything else is covered offline, including
+rate limiting, network failure and recovery, restart resumption, and shutdown.

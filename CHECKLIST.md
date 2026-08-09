@@ -475,27 +475,65 @@ than buried.
 
 ---
 
-## V2.9 — `panorama watch`
+## V2.9 — `panorama watch` · **built and tested offline; live checks pending**
 
-- [ ] Poll loop over open PRs for an owner
-- [ ] Per-PR cursor (last-reviewed head SHA) in the cache
-- [ ] Conditional requests with ETags
-- [ ] Rate-limit backoff
-- [ ] Per-run and per-hour review budget
-- [ ] Structured JSON logging
-- [ ] **Dry-run by default; `--post` requires an explicit repo allowlist**
-- [ ] One review in flight; queue on workspace-lock contention rather than fail
-- [ ] Unmoved head SHA is never re-reviewed
-- [ ] Draft PRs skipped by default
-- [ ] Bot-authored PRs skipped by default
-- [ ] Clean SIGTERM shutdown mid-review
-- [ ] Test (fake `gh`): new PR · updated PR · unchanged PR · draft · closed
-      mid-review · 403 rate limit with backoff · network failure and recovery
-- [ ] Test: restart resumes from cursor without re-reviewing
+- [x] Poll loop over open PRs for an owner
+- [x] Per-PR cursor (last-reviewed head SHA) in the cache
+- [-] Conditional requests with ETags — **interface supports it, the shipped
+      lister does not need it.** One GraphQL query covers the whole owner per
+      poll; the REST-plus-ETag alternative trades one request for dozens in
+      order to make most of them free. `PollResult` still carries an ETag and
+      the path is tested, so a future lister that benefits can use it.
+- [x] Rate-limit backoff, doubling and bounded, reset by a good poll
+- [x] Per-hour review budget, **counted from disk** so a crash-looping watcher
+      cannot refill it by restarting
+- [x] Structured JSON logging on stdout; dry-run reviews go to stderr so the
+      event stream stays parseable
+- [x] **Dry-run by default; `--post` requires an explicit repo allowlist**
+- [x] Workspace-lock contention treated as "try again next poll", not an error
+- [x] Unmoved head SHA is never re-reviewed
+- [x] Draft PRs skipped by default (`--include-drafts`)
+- [x] Bot-authored PRs skipped by default (`--include-bots`)
+- [x] Clean SIGINT/SIGTERM shutdown: stops taking new work, finishes the review
+      in hand, records it
+- [x] Test: new PR · updated PR · unchanged PR · draft · bot · closed
+      mid-run · rate limit with backoff · network failure and recovery
+- [x] Test: restart resumes from cursor without re-reviewing
+- [x] Test: the cursor only advances after a review actually completes
+- [x] Test: `gh` stderr is never echoed, so a token hint cannot leak into a log
+- [x] 41 new tests; ruff clean
 - [ ] Live: push to a seeded demo PR → exactly one review appears
 - [ ] Live: push again → exactly one update, not a second comment
 
-**Exit:** both live checks pass on the private demo org.
+**Exit: partially met.** Everything is built and covered offline. The two live
+checks need `panorama demo --github` against a real account, which creates
+private repositories — an outward-facing action that is never run automatically
+and needs the maintainer to invoke it.
+
+### Findings from V2.9
+
+- **The dangerous default was made hard to reach twice over.** `--post` alone
+  is *refused*, not ignored: it requires `--repo` naming every repository the
+  watcher may write to. The allowlist gates writing, not reviewing, so an
+  unlisted repository is still reviewed in dry run — useful and still safe.
+- **The hourly cap lives on disk on purpose.** In memory, a crash-looping
+  watcher would refill its own budget on every restart, which is precisely the
+  situation the cap exists for.
+- **The cursor advances only after a review completes.** Advancing it first
+  would let a crash mid-review silently mark the pull request done, and nothing
+  would ever look at it again.
+- **A 304 is not an empty organisation.** Conflating "nothing changed" with "no
+  open pull requests" would quietly discard the cursor logic; the poll result
+  distinguishes them explicitly and a test pins it.
+- **Forge payloads are treated as untrusted data.** A pull request with a null
+  author, a string where a number belongs, or a missing head commit is dropped
+  rather than raising — one unusual pull request must not be able to stop an
+  unattended process.
+- **ETags were dropped for a measured reason, not skipped.** One GraphQL
+  request per poll for an entire owner is already cheaper than the conditional
+  REST alternative it would replace.
+
+---
 
 ---
 

@@ -47,6 +47,15 @@ from panorama.retrieval import retrieve
 from panorama.review import context_truncated, run_review
 from panorama.selection import DEFAULT_CLONE_BUDGET
 from panorama.validation import validate_review
+from panorama.watch import (
+    DEFAULT_HOURLY_CAP,
+    DEFAULT_INTERVAL_SECONDS,
+    GhPullLister,
+    PullSummary,
+    WatchConfig,
+    Watcher,
+    summarise,
+)
 from panorama.workspace import Workspace
 
 app = typer.Typer(
@@ -541,3 +550,125 @@ def eval(  # noqa: A001 - the command really is called `eval`
 
 if __name__ == "__main__":
     app()
+
+
+@app.command()
+def watch(
+    owner: str = typer.Argument(..., help="GitHub owner (organisation or user) to watch."),
+    interval: int = typer.Option(
+        DEFAULT_INTERVAL_SECONDS, "--interval", min=1, help="Seconds between polls."
+    ),
+    post: bool = typer.Option(
+        False,
+        "--post",
+        help=(
+            "Post reviews as PR comments. Requires --repo; without it this is "
+            "refused rather than silently doing nothing."
+        ),
+    ),
+    repo: list[str] = typer.Option(
+        None,
+        "--repo",
+        help="A repository --post may comment on (repeatable). Required with --post.",
+    ),
+    hourly_cap: int = typer.Option(
+        DEFAULT_HOURLY_CAP, "--hourly-cap", min=1, help="Maximum reviews per hour."
+    ),
+    include_drafts: bool = typer.Option(False, "--include-drafts", help="Review draft PRs."),
+    include_bots: bool = typer.Option(
+        False, "--include-bots", help="Review bot-authored PRs."
+    ),
+    max_polls: int | None = typer.Option(
+        None, "--max-polls", min=1, help="Stop after this many polls (useful for a trial run)."
+    ),
+    all_repos: bool = typer.Option(
+        False, "--all-repos", help="Clone every repository for each review."
+    ),
+    clone_budget: int = typer.Option(
+        DEFAULT_CLONE_BUDGET, "--clone-budget", min=1, help="Repositories to clone per review."
+    ),
+) -> None:
+    """Watch an owner's open pull requests and review the ones that move.
+
+    A local polling loop, not a webhook: a hosted service would need an API key,
+    which this tool does not have and will not accept. Reviews therefore lag by
+    the poll interval and only run while this process does.
+
+    **Dry-run by default.** Reviews are rendered to the log; nothing is written
+    to GitHub unless `--post` is given *and* `--repo` names the repositories it
+    may write to.
+    """
+    config = WatchConfig(
+        owner=owner,
+        interval=interval,
+        post=post,
+        allowlist=frozenset(repo or ()),
+        hourly_cap=hourly_cap,
+        max_polls=max_polls,
+        include_drafts=include_drafts,
+        include_bots=include_bots,
+    )
+
+    try:
+        # Validate before opening anything: refusing `--post` without an
+        # allowlist is the single most important thing this command does, and
+        # it should read as a usage error rather than a crash.
+        config.validate()
+        cache = Cache.for_owner(owner)
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+
+    def review_one(pull: PullSummary, should_post: bool) -> bool:
+        """Run the ordinary review pipeline for one pull request.
+
+        Deliberately the *same* path a manual review takes, rather than a
+        parallel implementation: a watcher that reviewed differently from the
+        command would be two products with one name.
+        """
+        pull_request = GitHubPullRequestSource(owner, pull.repo, pull.number).load()
+        with WorkspaceProvisioner(
+            owner, budget=clone_budget, all_repos=all_repos, cache=cache
+        ) as provisioner:
+            workspace = provisioner.provision(pull_request)
+            validated, truncated, ranked = _run_pipeline(
+                pull_request, workspace, ClaudeRunner()
+            )
+            selection = provisioner.selection
+
+        if should_post:
+            _post_review(
+                owner, pull.repo, pull.number, pull_request, validated, truncated, ranked
+            )
+            return True
+
+        # Dry run: the review is the whole output, so it has to go somewhere a
+        # human can read. stderr, because stdout is the structured event stream
+        # and mixing prose into it would make the log unparseable.
+        typer.echo(
+            render_markdown(
+                pull_request,
+                validated,
+                retrieval_truncated=truncated,
+                ranked_repos=ranked,
+                selection=selection,
+            ),
+            err=True,
+        )
+        return False
+
+    watcher = Watcher(
+        config,
+        cache,
+        list_pulls=GhPullLister(owner),
+        review=review_one,
+    )
+    try:
+        stats = watcher.run()
+    except PanoramaError as exc:
+        typer.echo(f"error: {exc.message}", err=True)
+        raise typer.Exit(exc.exit_code) from exc
+    finally:
+        cache.close()
+
+    typer.echo(summarise(stats))

@@ -285,6 +285,7 @@ PRODUCTION_MODULES = (
     "panorama.review",
     "panorama.screening",
     "panorama.validation",
+    "panorama.watch",
     "panorama.workspace",
     "panorama.evaluation.cases",
     "panorama.evaluation.report",

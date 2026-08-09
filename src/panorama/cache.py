@@ -60,7 +60,7 @@ from panorama.errors import PanoramaError
 #: Bump when the table layout changes. Any mismatch drops and rebuilds, so this
 #: never needs to be a sequence anyone migrates *through* — only a value that
 #: differs from what is on disk.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 #: Owner read/write only. The cache describes private repository content.
 _FILE_MODE = stat.S_IRUSR | stat.S_IWUSR  # 0600
@@ -225,6 +225,30 @@ class Cache:
             );
 
             CREATE INDEX IF NOT EXISTS repo_facts_by_repo ON repo_facts (repo);
+
+            -- Where the watcher got to. One row per pull request, holding the
+            -- head commit it was last reviewed at, so a restart resumes instead
+            -- of re-reviewing everything it has already seen.
+            CREATE TABLE IF NOT EXISTS watch_cursors (
+                repo        TEXT    NOT NULL,
+                number      INTEGER NOT NULL,
+                head_sha    TEXT    NOT NULL,
+                reviewed_at TEXT    NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (repo, number)
+            );
+
+            -- Every review the watcher has performed, for the hourly cap. Kept
+            -- on disk rather than in memory so a crash-looping watcher cannot
+            -- reset its own budget by restarting.
+            CREATE TABLE IF NOT EXISTS watch_reviews (
+                repo        TEXT    NOT NULL,
+                number      INTEGER NOT NULL,
+                head_sha    TEXT    NOT NULL,
+                reviewed_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            );
+
+            CREATE INDEX IF NOT EXISTS watch_reviews_by_time
+                ON watch_reviews (reviewed_at);
             """
         )
         self._conn.execute(
@@ -246,7 +270,10 @@ class Cache:
     def _rebuild(self) -> None:
         """Drop everything and recreate at the current schema version."""
         self._conn.executescript(
-            "DROP TABLE IF EXISTS repo_facts; DROP TABLE IF EXISTS meta;"
+            "DROP TABLE IF EXISTS repo_facts;"
+            "DROP TABLE IF EXISTS watch_cursors;"
+            "DROP TABLE IF EXISTS watch_reviews;"
+            "DROP TABLE IF EXISTS meta;"
         )
         self._create_tables()
         self._conn.execute(
@@ -347,6 +374,58 @@ class Cache:
                 (repo, keep_sha),
             )
             return cursor.rowcount or 0
+
+    # -- watch state --------------------------------------------------------
+
+    def get_cursor(self, repo: str, number: int) -> str | None:
+        """The head commit this pull request was last reviewed at."""
+        row = self._conn.execute(
+            "SELECT head_sha FROM watch_cursors WHERE repo = ? AND number = ?",
+            (repo, number),
+        ).fetchone()
+        return row["head_sha"] if row else None
+
+    def set_cursor(self, repo: str, number: int, head_sha: str) -> None:
+        """Record that this pull request has been reviewed at ``head_sha``.
+
+        Also appends to the review log, which is what the hourly cap counts.
+        Both happen in one transaction: a cursor advanced without a logged
+        review would let a restart-loop review forever inside its budget.
+        """
+        with self._write() as conn:
+            conn.execute(
+                """
+                INSERT INTO watch_cursors (repo, number, head_sha)
+                VALUES (?, ?, ?)
+                ON CONFLICT (repo, number)
+                DO UPDATE SET head_sha = excluded.head_sha,
+                              reviewed_at = datetime('now')
+                """,
+                (repo, number, head_sha),
+            )
+            conn.execute(
+                "INSERT INTO watch_reviews (repo, number, head_sha) VALUES (?, ?, ?)",
+                (repo, number, head_sha),
+            )
+
+    def reviews_since(self, seconds: int) -> int:
+        """How many reviews the watcher has run in the last ``seconds``."""
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS n FROM watch_reviews "
+            "WHERE reviewed_at > datetime('now', ?)",
+            (f"-{int(seconds)} seconds",),
+        ).fetchone()
+        return int(row["n"])
+
+    def cursors(self) -> tuple[tuple[str, int, str], ...]:
+        """Every cursor, for `panorama status`."""
+        return tuple(
+            (row["repo"], row["number"], row["head_sha"])
+            for row in self._conn.execute(
+                "SELECT repo, number, head_sha FROM watch_cursors "
+                "ORDER BY repo, number"
+            )
+        )
 
     # -- operations ---------------------------------------------------------
 
