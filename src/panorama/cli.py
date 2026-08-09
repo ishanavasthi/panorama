@@ -206,20 +206,28 @@ def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
         result = run_review(pull_request, workspace, retrieval, runner=runner)
         validated = validate_review(result.data, pull_request, workspace)
         truncated = retrieval.truncated or context_truncated(pull_request.diff)
-        return validated, truncated
+        return validated, truncated, retrieval.ranked_repos
     finally:
         if cache is not None:
             cache.close()
 
 
-def _emit(pull_request, validated, truncated: bool, *, json_output: bool) -> None:
+def _emit(
+    pull_request, validated, truncated: bool, ranked, *, json_output: bool
+) -> None:
     if json_output:
         import json
 
-        obj = review_json_obj(pull_request, validated, retrieval_truncated=truncated)
+        obj = review_json_obj(
+            pull_request, validated, retrieval_truncated=truncated, ranked_repos=ranked
+        )
         typer.echo(json.dumps(obj, indent=2))
     else:
-        typer.echo(render_markdown(pull_request, validated, retrieval_truncated=truncated))
+        typer.echo(
+            render_markdown(
+                pull_request, validated, retrieval_truncated=truncated, ranked_repos=ranked
+            )
+        )
 
 
 def _review_local(local: str, base: str, head: str, *, json_output: bool) -> None:
@@ -231,12 +239,12 @@ def _review_local(local: str, base: str, head: str, *, json_output: bool) -> Non
         # search spans every sibling. Grant exactly that root to the child.
         workspace = Workspace(repo_path.resolve().parent)
         runner = ClaudeRunner(allowed_workspace_roots=[workspace.root])
-        validated, truncated = _run_pipeline(pull_request, workspace, runner)
+        validated, truncated, ranked = _run_pipeline(pull_request, workspace, runner)
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
-    _emit(pull_request, validated, truncated, json_output=json_output)
+    _emit(pull_request, validated, truncated, ranked, json_output=json_output)
 
 
 def _review_github(target: str, *, json_output: bool, post: bool = False) -> None:
@@ -256,18 +264,22 @@ def _review_github(target: str, *, json_output: bool, post: bool = False) -> Non
         with WorkspaceProvisioner(owner) as provisioner:
             workspace = provisioner.provision(pull_request)
             runner = ClaudeRunner()
-            validated, truncated = _run_pipeline(pull_request, workspace, runner)
+            validated, truncated, ranked = _run_pipeline(pull_request, workspace, runner)
 
-        _emit(pull_request, validated, truncated, json_output=json_output)
+        _emit(pull_request, validated, truncated, ranked, json_output=json_output)
 
         if post:
-            _post_review(owner, repo, number, pull_request, validated, truncated)
+            _post_review(
+                owner, repo, number, pull_request, validated, truncated, ranked
+            )
     except PanoramaError as exc:
         typer.echo(f"error: {exc.message}", err=True)
         raise typer.Exit(exc.exit_code) from exc
 
 
-def _post_review(owner, repo, number, pull_request, validated, truncated: bool) -> None:
+def _post_review(
+    owner, repo, number, pull_request, validated, truncated: bool, ranked
+) -> None:
     """Deliver the review as one idempotent PR comment, guarded against staleness.
 
     The head SHA is re-read immediately before posting and the post is aborted if
@@ -285,7 +297,9 @@ def _post_review(owner, repo, number, pull_request, validated, truncated: bool) 
             "Nothing was posted; re-run the review."
         )
 
-    markdown = render_markdown(pull_request, validated, retrieval_truncated=truncated)
+    markdown = render_markdown(
+        pull_request, validated, retrieval_truncated=truncated, ranked_repos=ranked
+    )
     body = build_comment_body(markdown)
     assert_postable(body)
     action = poster.upsert(body)

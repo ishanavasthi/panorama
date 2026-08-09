@@ -193,7 +193,9 @@ def _wire_common(monkeypatch, pr, validated):
     monkeypatch.setattr(cli, "GitHubPullRequestSource", _Source)
     monkeypatch.setattr(cli, "WorkspaceProvisioner", _Provisioner)
     monkeypatch.setattr(cli, "ClaudeRunner", lambda *a, **k: object())
-    monkeypatch.setattr(cli, "_run_pipeline", lambda *a, **k: (validated, False))
+    # Returns (validated, truncated, ranked_repos); the ranking feeds the
+    # "Repositories examined" provenance section added in V2.7.
+    monkeypatch.setattr(cli, "_run_pipeline", lambda *a, **k: (validated, False, []))
 
 
 def test_cli_post_reports_created(monkeypatch: pytest.MonkeyPatch) -> None:

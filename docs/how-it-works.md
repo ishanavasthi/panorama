@@ -215,10 +215,23 @@ overwhelmingly certain about its top result cannot say so, so **two second
 places outweigh one first place** regardless of how far ahead that first place
 was. This is not hypothetical: it is measured on the corpus, where two cases
 have their true target displaced by a repository that two channels each rank
-second. It is a deliberate trade of some ceiling for a lot of robustness, and
-the harness is what keeps it a testable choice rather than a permanent one.
-`DECISIONS.md` records why every alternative that avoids fitted weights was
-rejected.
+second.
+
+Sweeping the constant across the whole corpus showed something worth knowing:
+**every value above zero produces identical results.** The standard value is
+calibrated for many systems ranking thousands of documents, where damping the
+influence of top ranks is the point. Here three channels rank a handful of
+repositories, so the gap between first and third is a couple of percent while one
+extra channel voting at all doubles a score. Fusion at this scale is therefore
+close to pure vote counting — a structural property of the method, not a tuning
+opportunity. It also means there is no constant to overfit with.
+
+Zero behaves differently, and was rejected for an instructive reason. At zero,
+two second places sum to *exactly* one first place, so those two displaced cases
+become ties and recall@1 reaches a perfect score. That is a better number
+describing a ranking that discriminates *less*, reported using the one metric
+blind to the difference — which is precisely what the ties-excluded metric exists
+to catch.
 
 ### Silence is a legal answer
 
@@ -236,6 +249,19 @@ finds is ever cited directly. The prompt says so explicitly, and validation
 enforces it independently. This matters because retrieval is heuristic by
 nature, and a heuristic feeding citations directly would be a machine for
 generating confident nonsense.
+
+### The search is shown, not just its conclusions
+
+Every ranked repository carries a plain-language reason, and the report ends
+with a "Repositories examined" section naming each repository and which channel
+surfaced it, with what evidence — "ranked #1 by dependency edge, #3 by lexical
+overlap, not seen by the symbol index".
+
+That is a sentence a reviewer can disagree with. A bare ordering is not. Since
+retrieval is heuristic by construction, showing the search is the honest posture:
+it lets a reader judge how much weight the conclusions deserve, and it makes
+silence legible — when nothing is surfaced, the report says so and says what was
+tried.
 
 ---
 

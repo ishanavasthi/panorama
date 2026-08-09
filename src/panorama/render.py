@@ -16,6 +16,7 @@ No fixture repository names, field names, or finding text appear here.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from panorama.intake import PullRequest
@@ -61,11 +62,41 @@ def _render_finding(index: int, finding: Finding) -> list[str]:
     return out
 
 
+def render_provenance(ranked: Sequence[Any]) -> list[str]:
+    """Say which repositories were examined, and why each one was.
+
+    A reader's first question about a cross-repository review is "why was that
+    repository even looked at" — and their second is "what did you *not* look
+    at". Retrieval is heuristic, so a ranking nobody can interrogate is a
+    ranking nobody should trust. Each entry names the channels that surfaced
+    the repository and what each of them saw.
+
+    Rendered from the same ranking the review actually ran on, so the
+    explanation cannot drift from the thing it explains.
+    """
+    if not ranked:
+        return [
+            "_No sibling repository was surfaced: nothing shared an identifier "
+            "with the change, no declared dependency connects one, and no "
+            "exported name matched._",
+            "",
+        ]
+
+    lines = ["## Repositories examined", ""]
+    for entry in ranked:
+        lines.append(f"- **{entry.repo}**")
+        for reason in getattr(entry, "provenance", ()) or ():
+            lines.append(f"  - {reason}")
+    lines.append("")
+    return lines
+
+
 def render_markdown(
     pr: PullRequest,
     validated: ValidatedReview,
     *,
     retrieval_truncated: bool = False,
+    ranked_repos: Sequence[Any] | None = None,
 ) -> str:
     """Render the validated review as reference-only Markdown."""
     out: list[str] = [
@@ -87,6 +118,9 @@ def render_markdown(
     else:
         out.append(_NO_IMPACT)
         out.append("")
+
+    if ranked_repos is not None:
+        out.extend(render_provenance(ranked_repos))
 
     out.append("---")
     out.append("")
@@ -124,6 +158,7 @@ def review_json_obj(
     validated: ValidatedReview,
     *,
     retrieval_truncated: bool = False,
+    ranked_repos: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
     """A stable, machine-readable view of the validated review.
 
@@ -143,4 +178,15 @@ def review_json_obj(
             for d in validated.discarded
         ],
         "retrieval_truncated": retrieval_truncated,
+        # Which repositories retrieval put in front of the model, and why. Not
+        # findings — the record of what was *considered*, so a reader can see
+        # the shape of the search rather than only its conclusions.
+        "examined": [
+            {
+                "repo": entry.repo,
+                "score": entry.score,
+                "provenance": list(getattr(entry, "provenance", ()) or ()),
+            }
+            for entry in (ranked_repos or ())
+        ],
     }

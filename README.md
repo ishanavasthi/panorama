@@ -80,12 +80,49 @@ each case is for and, just as importantly, what the corpus does not cover.
 For how the system works under the hood — what each pipeline stage computes and
 why — read **`docs/how-it-works.md`**.
 
-## Evaluation
+## Measured quality
 
-The fixtures were reviewed against a real Claude Code subscription, twice each,
-to record category- and evidence-level outcomes. (Exact model wording is not
-recorded — it varies between runs; the *categories and cited repositories* are
-what matter.)
+Retrieval quality is a number, not an impression. `panorama eval` scores which
+sibling repository the deterministic pass put in front of the model, over the
+18 labelled cases, with **no subscription and no network** — so it runs as a
+regression gate on every commit. A change that lowers recall without a recorded
+reason does not land.
+
+```bash
+uv run panorama fixtures bootstrap
+uv run panorama eval                 # exits non-zero on a regression
+uv run panorama eval --json          # per-case detail
+```
+
+Where it stands on the 18-case corpus, across the milestones that built it:
+
+| Metric | Baseline | + dependency graph | + symbol index |
+|---|---:|---:|---:|
+| recall@1 | 0.750 | 0.750 | **0.833** |
+| recall@1, ties excluded | 0.750 | 0.750 | **0.833** |
+| recall@3 | 0.917 | **1.000** | 1.000 |
+| MRR | 0.833 | 0.875 | **0.917** |
+| file recall | 1.000 | 1.000 | 1.000 |
+
+Every positive case has its target repository in the top three; ten of twelve
+have it outright first; no negative control surfaces a single lead.
+
+Two things this table does *not* say, both recorded in `DECISIONS.md`:
+
+- Two contract-break cases sit at rank 2 rather than 1. Their consumers reach
+  the changed service over HTTP, so nothing is declared for the structural
+  channels to find, and rank fusion's blindness to magnitude lets a repository
+  ranked second by two channels edge past a target ranked first by one.
+- The fusion constant was swept across the whole corpus and every value above
+  zero gives identical results. Zero would reach a perfect recall@1 — by turning
+  those two losses into *ties*, which is worse retrieval reported with a better
+  number. It was rejected for that reason.
+
+## Evaluation against the model
+
+The fixtures were reviewed against a real Claude Code subscription to record
+category- and evidence-level outcomes. (Exact model wording is not recorded — it
+varies between runs; the *categories and cited repositories* are what matter.)
 
 | PR | Expected | Result (both passes) |
 |---|---|---|

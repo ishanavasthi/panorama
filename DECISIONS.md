@@ -1339,3 +1339,103 @@ A measurement on a real organisation with genuine history, showing it improves
 ranking on cases the other channels miss. Until that exists, it stays off. An
 unmeasured channel enabled by default is a quality claim nobody has checked, and
 the entire point of doing measurement before mechanism was to stop making those.
+
+## V2.7 — the honest number
+
+The cut line. Retrieval is finished; everything after this is additive.
+
+### Where retrieval ended up
+
+On the four cases inherited from V1, measured the same way:
+
+| Case | V1 | Now |
+|---|---|---|
+| Field rename breaks a consumer | rank 1 | rank 1 |
+| Duplicate of a shared helper | rank 1 | rank 1 |
+| Convention violation | rank 1, **tied three ways** | **rank 1, outright** |
+| Docs-only control | no finding | no finding |
+
+That third row is V1's recorded weakness. S4 noted that a violated convention
+leaves almost no lexical footprint, so the correct neighbour only *tied* for
+first — and V2.1 turned that observation into a number by adding an outright
+recall metric that refuses to credit a tie. It is now cleanly first.
+
+On the full 18-case corpus, across the milestones that built it:
+
+| Metric | V2.2 baseline | V2.4 deps | V2.5 symbols |
+|---|---:|---:|---:|
+| recall@1 | 0.750 | 0.750 | **0.833** |
+| outright recall@1 | 0.750 | 0.750 | **0.833** |
+| recall@3 | 0.917 | **1.000** | 1.000 |
+| MRR | 0.833 | 0.875 | **0.917** |
+| file recall | 1.000 | 1.000 | 1.000 |
+
+Every positive case has its target inside the top three. Ten of twelve have it
+outright first. No negative control surfaces a single lead.
+
+Against the V2.7 targets set in the plan: recall@3 ≥ 0.90 — **met at 1.000**.
+No case regressed versus V1 — **met**.
+
+### Tuning: one iteration, no change, and why
+
+The plan allows two tuning iterations and requires that tuning change *generic
+mechanism*, never add a fixture-specific special case. One iteration was spent,
+on the only genuinely generic knob in the system: the fusion constant.
+
+Sweeping it across the whole corpus produced a flat line. **Every value from 1
+upward gives byte-identical results** — same ranks, same metrics, same ordering.
+The reason is a scale mismatch: the standard constant is calibrated for many
+retrieval systems ranking thousands of documents, where damping the influence of
+top ranks is the point. Here three channels rank at most a handful of
+repositories, so the gap between rank 1 and rank 3 is a couple of percent, while
+one extra channel voting at all doubles a repository's score.
+
+**Fusion at this scale is therefore close to pure vote counting**, and that is a
+structural property of the method rather than a tuning failure. It is also the
+complete explanation of the two cases V2.4 demoted: a repository ranked second
+by two channels beats one ranked first by a single channel, and no setting of the
+constant changes that.
+
+Only zero behaves differently. At zero, reciprocal rank is exactly `1/rank`, so
+two second places sum to precisely one first place: the two demoted cases become
+*ties* rather than losses, and recall@1 reaches a perfect 1.000 with MRR at
+1.000.
+
+That was rejected, and the reason matters more than the decision. Plain recall@1
+cannot tell a clean first place from a three-way tie for first. The outright
+variant can — which is exactly why V2.1 added it, after the V1 corpus came back
+saturated. Choosing zero would have bought a perfect headline number by making
+the ranking *less* able to discriminate, and then reported the improvement using
+the one metric blind to what was given up. That is the specific self-deception
+this harness was built to prevent, so the constant stays at its standard value.
+
+**Net result of tuning: no change, and a recorded reason.** The second iteration
+was not spent, because the sweep showed there is nothing there to spend it on.
+
+### There is no knob left, and that is the finding
+
+Worth stating plainly, because it is the boundary of what this design can do.
+Making one channel's strong conviction outweigh two channels' weak agreement
+requires expressing *magnitude*, and every way of expressing magnitude needs a
+parameter fitted against something. The only thing available to fit against is
+the 18-case corpus, which would make the resulting numbers a description of the
+corpus rather than of the problem.
+
+So the remaining headroom in retrieval is not in fusion. It is in the two cases
+where both structural channels are silent because the coupling is an HTTP
+contract that nothing declares — and closing that would mean reading route
+strings and response shapes as a first-class signal, which is a different design,
+not a tuning pass.
+
+### Provenance, rendered
+
+Every ranked repository now carries a plain-language reason, and the rendered
+report and JSON output both carry a "Repositories examined" section listing which
+repositories were looked at and which channel surfaced each, with what evidence.
+
+This is not decoration. Retrieval is heuristic by construction, so the honest
+posture is to show the search and not only its conclusions. "Ranked #1 by
+dependency edge, #3 by lexical overlap, not seen by the symbol index" is a
+sentence a reviewer can disagree with; a bare ordering is not. It also makes the
+silent cases legible — when nothing is surfaced, the report says so and says what
+was tried.

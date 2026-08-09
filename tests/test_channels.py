@@ -220,6 +220,47 @@ def test_fusion_order_is_deterministic_under_ties() -> None:
     assert [f.repo for f in fused] == ["alpha", "zebra"]
 
 
+def test_the_fusion_constant_barely_matters_at_this_scale() -> None:
+    """Measured in V2.7's tuning pass, pinned here so it stays a known fact.
+
+    The standard constant is calibrated for many systems ranking thousands of
+    documents. Here three channels rank at most a handful of repositories, so
+    the gap between rank 1 and rank 3 is a couple of percent while an extra
+    channel's vote doubles the score. Fusion is therefore close to pure vote
+    counting, and the constant is nearly inert.
+
+    That is worth knowing in both directions: it means no tuning of the constant
+    is available to overfit with, and it means agreement between channels
+    dominates any single channel's confidence.
+    """
+    results = [result_of("one", "solo"), result_of("two", "pair"), result_of("three", "pair")]
+    orders = {
+        tuple(f.repo for f in fuse(results, k=k)) for k in (1, 2, 5, 10, 20, 60, 120)
+    }
+    assert len(orders) == 1, "changing the constant reordered results"
+    # Two channels ranking a repository first beat one channel ranking another
+    # first, at every constant above zero.
+    assert orders.pop()[0] == "pair"
+
+
+def test_without_the_constant_two_seconds_exactly_tie_one_first() -> None:
+    """Why zero was considered and rejected in tuning.
+
+    At k=0 reciprocal rank is 1/rank, so two second places sum to exactly one
+    first place. On the corpus that converts two losses into ties and lifts
+    recall@1 to a perfect score — while making the ranking *less* able to
+    discriminate. Plain recall@1 cannot see the difference; the outright
+    variant can, which is what it was added for.
+    """
+    results = [
+        result_of("one", "solo"),
+        result_of("two", "x", "pair"),
+        result_of("three", "y", "pair"),
+    ]
+    fused = {f.repo: f.score for f in fuse(results, k=0)}
+    assert fused["solo"] == pytest.approx(fused["pair"])
+
+
 # ---------------------------------------------------------------------------
 # the lexical channel as an implementation
 # ---------------------------------------------------------------------------

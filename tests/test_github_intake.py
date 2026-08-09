@@ -268,7 +268,9 @@ def test_cli_github_branch_renders_a_validated_review(monkeypatch: pytest.Monkey
     monkeypatch.setattr(cli, "GitHubPullRequestSource", _FakeSource)
     monkeypatch.setattr(cli, "WorkspaceProvisioner", _FakeProvisioner)
     monkeypatch.setattr(cli, "ClaudeRunner", lambda *a, **k: object())
-    monkeypatch.setattr(cli, "_run_pipeline", lambda *a, **k: (validated, False))
+    # Returns (validated, truncated, ranked_repos); the ranking feeds the
+    # "Repositories examined" provenance section added in V2.7.
+    monkeypatch.setattr(cli, "_run_pipeline", lambda *a, **k: (validated, False, []))
 
     result = CliRunner().invoke(app, ["review", "acme/acme-api#7", "--json"])
     assert result.exit_code == 0, result.output

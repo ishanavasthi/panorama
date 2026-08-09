@@ -397,6 +397,68 @@ def test_review_json_obj_is_reference_only_and_structured(pr, retrieval) -> None
 
 
 # ---------------------------------------------------------------------------
+# provenance: why each repository was examined
+# ---------------------------------------------------------------------------
+
+
+def test_render_explains_why_each_repository_was_examined(pr) -> None:
+    """A reader's first question is "why that repository". A ranking nobody can
+    interrogate is a ranking nobody should trust."""
+    from panorama.retrieval import RepoRelevance
+
+    ranked = [
+        RepoRelevance(
+            repo="consumer",
+            score=0.03,
+            signals=["thing"],
+            provenance=["lexical #1: shares 1 identifier(s) with the diff: thing"],
+        ),
+        RepoRelevance(
+            repo="standards",
+            score=0.02,
+            signals=[],
+            provenance=["dependency #2: this repository depends on it (@x/y), directly"],
+        ),
+    ]
+    out = render_markdown(pr, _validated(), ranked_repos=ranked)
+
+    assert "## Repositories examined" in out
+    assert "**consumer**" in out and "**standards**" in out
+    assert "lexical #1" in out and "dependency #2" in out
+
+
+def test_render_states_plainly_when_nothing_was_surfaced(pr) -> None:
+    """Silence has to be explained rather than merely absent."""
+    out = render_markdown(pr, _validated(), ranked_repos=[])
+    assert "No sibling repository was surfaced" in out
+
+
+def test_render_omits_the_section_entirely_when_not_given_a_ranking(pr) -> None:
+    """The parameter is optional, so older callers render exactly as before."""
+    assert "Repositories examined" not in render_markdown(pr, _validated())
+
+
+def test_provenance_reaches_the_json_output(pr) -> None:
+    from panorama.retrieval import RepoRelevance
+
+    ranked = [RepoRelevance(repo="consumer", score=0.03, provenance=["lexical #1: why"])]
+    obj = review_json_obj(pr, _validated(), ranked_repos=ranked)
+    assert obj["examined"] == [
+        {"repo": "consumer", "score": 0.03, "provenance": ["lexical #1: why"]}
+    ]
+
+
+def test_provenance_never_carries_source(pr) -> None:
+    """It names repositories and reasons. It must not become a quoting channel."""
+    from panorama.retrieval import RepoRelevance
+
+    ranked = [RepoRelevance(repo="consumer", score=0.03, provenance=["lexical #1: why"])]
+    out = render_markdown(pr, _validated(), ranked_repos=ranked)
+    section = out.split("## Repositories examined", 1)[1]
+    assert "```" not in section
+
+
+# ---------------------------------------------------------------------------
 # prompt assembly
 # ---------------------------------------------------------------------------
 
