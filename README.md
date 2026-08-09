@@ -61,8 +61,9 @@ Everything below is measured, not asserted. Where a number is weak, it says so.
 - Python 3.11+
 - [`uv`](https://docs.astral.sh/uv/)
 - `git` >= 2.25
-- [`gh`](https://cli.github.com/), authenticated (`gh auth login`) — only
-  needed once GitHub PR review lands; local fixture review doesn't use it
+- [`gh`](https://cli.github.com/), authenticated (`gh auth login`) — needed to
+  review real GitHub pull requests, to run `watch`, and to seed a live demo;
+  local fixture review and `eval` use neither `gh` nor the network
 - [Claude Code](https://claude.com/claude-code), signed in with your
   subscription (`claude` on `PATH`)
 
