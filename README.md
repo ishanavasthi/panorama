@@ -239,7 +239,11 @@ performs the review.
 
 ## Status
 
-Feature-complete V1. Implemented: `panorama doctor`, `panorama fixtures
+Feature-complete V1. V2 development has started on the
+[`v2`](https://github.com/ishanavasthi/panorama/tree/v2) branch; `main` remains
+the stable V1.
+
+Implemented: `panorama doctor`, `panorama fixtures
 bootstrap`, `panorama review` end to end for a local fixture (`--local`) and a
 GitHub PR (`owner/repo#n` or URL) — with `--json` and an idempotent `--post` —
 and `panorama demo --github` to seed a live private demo. See `v1plan.md` for
