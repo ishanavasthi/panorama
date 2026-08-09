@@ -6,9 +6,11 @@ helper that duplicates one that already exists elsewhere, an endpoint that
 ignores an org convention. A normal review only sees the one repo; Panorama
 looks at the neighbours too, and cites exactly where.
 
-It is a CLI, not a GitHub App: you run `panorama review ...` against a PR (or
-a local fixture) and get a Markdown report with `repo/path:line` references,
-never a copied excerpt from another repository.
+It is a CLI and a local watcher, not a GitHub App: you run `panorama review ...`
+against a PR (or a local fixture), or leave `panorama watch <owner>` running to
+review pull requests as they move. Either way the output is a Markdown report
+with `repo/path:line` references, never a copied excerpt from another
+repository.
 
 **All review reasoning runs through the local Claude Code CLI (`claude`), on
 your existing Claude Code subscription.** Panorama has no Anthropic API
@@ -16,7 +18,43 @@ integration of any kind — no SDK, no HTTP call, no API key. If `claude` isn't
 installed and signed in, Panorama has no fallback. See `CLAUDE.md` for the
 full list of constraints this project is built against.
 
-> **Demo:** https://link.ishanavasthi.in/panorama-video
+> **V1 walkthrough video:** https://link.ishanavasthi.in/panorama-video
+> *(V2 has no video yet — see [Live demo](#live-demo-a-real-private-organisation)
+> for a transcript of a real run against a private GitHub organisation.)*
+
+---
+
+## What V2 adds
+
+V1 shipped a working cross-repository reviewer. V2 made its quality
+**measurable**, then measurably **better**, then able to run **unattended**.
+
+**1. Quality is a number, gated on every commit.** An 18-case labelled corpus
+across six repositories and three languages — about a third of it negative
+controls, where the correct answer is to say nothing. Retrieval scoring is
+deterministic and needs no subscription, so it runs as a regression gate.
+
+**2. Retrieval reads structure, not just words.** V1 had one lexical channel and
+could only find links that shared *vocabulary*. V2 adds a dependency graph
+(resolved package-name to package-name) and a symbol index (who actually imports
+what), fused by reciprocal rank. That closed the case V1 recorded as its
+weakness: a convention violated by an *absence*, where the diff and the document
+it breaks share no word at all.
+
+**3. It reviews without being asked.** `panorama watch` polls, reviews what
+moved, and is dry-run by default — posting needs an explicit flag *and* an
+explicit repository allowlist. Findings carry stable identities so a dismissed
+one stops coming back.
+
+| | V1 | V2 |
+|---|---|---|
+| Corpus | 4 cases, 4 repos, 1 language | **18 cases, 6 repos, 3 languages** |
+| Retrieval recall@3 | not measured | **1.000** |
+| False positives on negative controls | not measured | **0.000** (54 live runs) |
+| Organisation size | refused above 50 repos | **clone budget**, any size |
+| Automation | none | `panorama watch`, dry-run by default |
+
+Everything below is measured, not asserted. Where a number is weak, it says so.
 
 ## Prerequisites
 
@@ -305,6 +343,114 @@ posting the result back:
 uv run panorama review <your-user-or-org>/acme-api#1 --post
 ```
 
+## Live demo: a real private organisation
+
+V2 was exercised end to end against a private GitHub organisation of **six
+repositories and eighteen open pull requests**, seeded from the fixtures. This
+is a transcript of that run, not an illustration.
+
+### Reviewing a contract break
+
+`acme-api#1` renames a response field. Nothing in that repository is wrong; the
+break is in a neighbour.
+
+Real output, with each finding's summary and rationale paragraphs elided for
+length — everything else is verbatim:
+
+```
+# Panorama review — acmepanorama/acme-api
+`main` ← `p1-rename`
+**Verdict:** request changes
+
+## Findings (2)
+
+### 1. [HIGH · contract_break] Renaming url to target_url breaks acme-web link rendering
+- In this pull request: `src/types.ts:5`
+- Reference: `1e817e6d03` (reply `panorama: dismiss <reference>` to stop seeing it)
+- Evidence:
+  - `acme-api/src/types.ts:5`
+  - `acme-api/src/handlers/links.ts:7`
+  - `acme-web/src/api/links.ts:11`
+  - `acme-web/src/render.ts:4`
+
+### 2. [MEDIUM · convention] Breaking response shape change made in place instead of via a new version prefix
+- Evidence:
+  - `acme-contracts/docs/versioning.md:16`
+
+## Repositories examined
+
+- **acme-web**
+  - lexical #1: shares 1 identifier(s) with the diff: url
+- **acme-contracts**
+  - dependency #2: this repository depends on it (@acme/contracts), directly
+
+_Examined all 6 repositories in the organisation._
+
+---
+_No findings were discarded during host validation._
+```
+
+Three things in that output are the V2 work:
+
+- **Two channels, visibly different.** `acme-web` surfaced because it shares a
+  word with the diff. `acme-contracts` surfaced because the API repository
+  *declares a dependency on it* — the diff contains no word from that document,
+  so V1 could not have found it. The report says which mechanism found which.
+- **Every citation was validated** against the checked-out commit before it was
+  printed. None were discarded here; when they are, the count is stated.
+- **The search is shown, not just the conclusion** — including how many
+  repositories were examined versus considered.
+
+### The unattended path
+
+```
+$ panorama watch acmepanorama --hourly-cap 2
+{"event":"watch_started","hourly_cap":2,"post":false,"allowlist":[]}
+{"event":"polled","open_pulls":18}
+{"event":"reviewing","ref":"acme-api#9","head":"a1d42d4c6c87","post":false}
+{"event":"reviewed","ref":"acme-api#9","posted":false}
+{"event":"hourly_cap_reached","ref":"acme-api#7","cap":2}
+...
+{"event":"watch_stopped","polls":1,"reviewed":2,"posted":0,"skipped":16}
+```
+
+All eighteen pull requests found in **one** API query. Dry run, so nothing was
+written. The hourly cap held. Running it again skipped everything already seen:
+
+```
+{"event":"skipped","ref":"acme-api#9","reason":"already reviewed at this commit"}
+```
+
+— with no model calls at all, because the cursor is on disk and a restart
+resumes rather than re-reviewing the world.
+
+### Posting is idempotent
+
+| Action | Comments on the PR |
+|---|---|
+| `review --post` | 1 (created) |
+| `review --post` again | 1 (**updated**, not duplicated) |
+| push a new commit, `review --post` | 1 (**updated**) |
+
+One comment per pull request, edited in place, however many times it runs.
+
+### What the live run found that offline testing could not
+
+Two real bugs, both invisible to a test suite that bootstraps a fresh
+organisation every time:
+
+- **Sibling checkouts were never refreshed after the first clone.** Provisioning
+  fetched but never updated the working tree — and retrieval greps the working
+  tree. Every review of an organisation after the first silently searched
+  whatever each sibling looked like on the day it was first cloned. The output
+  still looked sensible; it was answering a question about the past.
+- **`demo --github` could not refresh an organisation it had already seeded**,
+  only delete and rebuild it — which needs a scope most tokens lack and destroys
+  the pull requests that make a demo worth showing.
+
+Both are fixed, with tests that enter the state the offline suite never did.
+`DECISIONS.md` has the full account.
+
 ## Architecture
 
 One pipeline runs for every review, regardless of where the PR came from:
@@ -316,22 +462,26 @@ flowchart LR
     subgraph PIPE["panorama review — one pipeline"]
         direction LR
         INTAKE["intake<br/>PR metadata + diff<br/>normalized PullRequest"]
-        WORKSPACE["workspace<br/>clone/fetch siblings<br/>PR repo pinned at head SHA<br/>(private, 0700, locked)"]
-        RETRIEVE["retrieve<br/>diff to generic signals<br/>bounded git-grep across siblings<br/>+ org map + convention docs"]
+        WORKSPACE["workspace<br/>manifests read without cloning<br/>top-N cloned blobless, locked<br/>PR repo pinned at head SHA"]
+        RETRIEVE["retrieve — 3 channels, rank-fused<br/>lexical · dependency graph · symbol index<br/>+ org map + convention docs"]
         REVIEW["review<br/>local claude CLI<br/>Read/Grep/Glob only, sandboxed<br/>JSON-schema output"]
         VALIDATE["validate<br/>repo/path/line/SHA checks<br/>foreign-evidence + secret screen<br/>discard unsupported findings"]
-        INTAKE --> WORKSPACE --> RETRIEVE --> REVIEW --> VALIDATE
+        SUPPRESS["suppress<br/>drop findings already dismissed<br/>and count them"]
+        INTAKE --> WORKSPACE --> RETRIEVE --> REVIEW --> VALIDATE --> SUPPRESS
     end
 
     DELIVER["deliver<br/>Markdown · --json<br/>idempotent --post"]
+    WATCH["panorama watch<br/>polls, reviews what moved<br/>dry-run by default"]
 
     PR --> PIPE
-    VALIDATE --> DELIVER
+    WATCH -.-> PIPE
+    SUPPRESS --> DELIVER
 
     classDef ai fill:#f4e6ff,stroke:#7a3fb0,color:#2b1240;
     classDef guard fill:#e6f4ff,stroke:#2f6fb0,color:#0d2436;
     class REVIEW ai;
     class VALIDATE guard;
+    class SUPPRESS guard;
 ```
 
 Key properties:
@@ -344,6 +494,10 @@ Key properties:
   code finds likely cross-repo context; Claude reviews with that context;
   then host code re-checks every citation against the real files. A finding
   whose evidence doesn't resolve is **discarded, never downgraded**.
+- **Channels are independent and each explains itself.** Adding one cannot
+  change another's output — which is what lets the evaluation harness attribute
+  a change to the thing that caused it — and every ranked repository carries the
+  reason it surfaced, printed in the report.
 - **The Claude boundary defines the security model.** The only AI integration
   is the local `claude` CLI on its subscription — no SDK, no HTTP, no API key.
   It runs read/search-only, with the user's personal config, plugins, and MCP
@@ -357,18 +511,29 @@ Key properties:
 
 The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
 
-- **A CLI, not a GitHub App.** The hard problem is *finding cross-repo
-  context*, not delivery plumbing; the same pipeline wraps in a webhook later.
-  The assignment explicitly permits a CLI that can become a bot.
+- **A CLI and a local watcher, not a GitHub App — and that is structural, not a
+  deferral.** A hosted service has no Claude Code subscription; that credential
+  belongs to a person and a machine. Putting one in a serverless function would
+  break both "no API key" and "credentials stay with the tool that owns them" at
+  once. So automation is a *pull* model. Reviews lag by the poll interval and
+  only run while your machine does — an honest consequence of the constraint,
+  not something that can be engineered away.
 - **The model reads the repositories directly, and the host checks its answers.**
   Rather than feeding the model only pre-selected snippets (blind to whatever
   retrieval missed) or letting it roam unverified (free to invent citations), it
   does both — and every citation is re-checked against the real files, with
   failures **discarded, never downgraded**.
-- **Lexical retrieval, not embeddings.** Explainable — every surfaced repo is
-  justified by which signal matched which line — with no index to build or drift.
+- **Explainable retrieval, not embeddings.** Three channels — shared vocabulary,
+  declared dependencies, and imported/exported symbols — each of which can say
+  *why* it surfaced a repository, fused by rank rather than by a weighted sum
+  whose weights could only be fitted on the corpus they are then scored against.
+  No vector index to build, drift, or explain away.
 - **Findings cite locations; they never quote code.** Reference-only output is
   safe to post on a repo whose readers can't see the cited repo's source.
+- **Persistent state can only make a review slower, never wrong.** The cache is
+  keyed by repository *and commit*, so a new commit simply misses; every citation
+  is validated against the live checkout with no cache in that path. And anything
+  read from a pull request thread — a dismissal — can only ever *subtract*.
 
 ## Known limitations
 
@@ -451,13 +616,19 @@ unattended.
 | `panorama status <owner>` | What is held locally: cache, cursors, dismissals |
 | `panorama cache clear <owner>` | Reset derived state |
 | `panorama suppressions list\|clear` | Inspect and undo dismissals |
-| `panorama demo --github <owner>` | Seed a live private demo |
+| `panorama demo --github <owner> [--update]` | Seed or refresh a live private demo |
+
+Verified end to end against a real private organisation of six repositories and
+eighteen pull requests — see [Live demo](#live-demo-a-real-private-organisation).
 
 `v2plan.md` has the build order, `CHECKLIST.md` the status of every milestone
 including what was dropped and why, `DECISIONS.md` the reasoning and the
 measurements, `docs/how-it-works.md` the mechanism, and `docs/corpus.md` the
 ground truth quality is measured against.
 
-Not done, and honest about it: the two live `watch` checks need a seeded demo
-organisation, and inline review comments were dropped in favour of the
-fingerprint and suppression work in the same milestone.
+Not done, and honest about it: **inline review comments were dropped** in favour
+of the fingerprint and suppression work in the same milestone. A summary comment
+is idempotent because one marked comment can be edited in place; a review with
+inline comments is not, and making it safe means tracking posted findings per
+run — persistent state in the code path that writes to someone else's pull
+request, in exchange for better *placement* of findings already being delivered.
