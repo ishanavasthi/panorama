@@ -1,0 +1,5249 @@
+{
+  "contract-break-field-rename": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 5,
+        "path": "src/api/links.ts",
+        "repo": "acme-web",
+        "token": "url",
+        "window": [
+          "3: export interface LinkView {",
+          "4:   id: string;",
+          "5:   url: string;",
+          "6: }",
+          "7: "
+        ]
+      },
+      {
+        "line": 11,
+        "path": "src/api/links.ts",
+        "repo": "acme-web",
+        "token": "url",
+        "window": [
+          "9:   const res = await fetch(`/api/links/${id}`);",
+          "10:   const data = (await res.json()) as LinkView;",
+          "11:   return { id: data.id, url: data.url };",
+          "12: }"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/render.ts",
+        "repo": "acme-web",
+        "token": "url",
+        "window": [
+          "2: ",
+          "3: export async function renderLink(id: string): Promise<string> {",
+          "4:   const { url } = await fetchLink(id);",
+          "5:   return `<a href=\"${url}\">${url}</a>`;",
+          "6: }"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/render.ts",
+        "repo": "acme-web",
+        "token": "url",
+        "window": [
+          "3: export async function renderLink(id: string): Promise<string> {",
+          "4:   const { url } = await fetchLink(id);",
+          "5:   return `<a href=\"${url}\">${url}</a>`;",
+          "6: }"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-web",
+        "score": 5.0,
+        "signals": [
+          "url"
+        ]
+      }
+    ],
+    "searched": [
+      "target_url",
+      "url"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "target_url",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "url",
+        "weight": 5
+      }
+    ],
+    "truncated": false
+  },
+  "contract-break-removed-endpoint": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 28,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "active_links",
+        "window": [
+          "26:     return {",
+          "27:         \"total_links\": payload[\"total_links\"],",
+          "28:         \"active_links\": payload[\"active_links\"],",
+          "29:         \"generated_at\": payload[\"generated_at\"],",
+          "30:     }"
+        ]
+      },
+      {
+        "line": 29,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "generated_at",
+        "window": [
+          "27:         \"total_links\": payload[\"total_links\"],",
+          "28:         \"active_links\": payload[\"active_links\"],",
+          "29:         \"generated_at\": payload[\"generated_at\"],",
+          "30:     }"
+        ]
+      },
+      {
+        "line": 27,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "total_links",
+        "window": [
+          "25:     payload = response.json()",
+          "26:     return {",
+          "27:         \"total_links\": payload[\"total_links\"],",
+          "28:         \"active_links\": payload[\"active_links\"],",
+          "29:         \"generated_at\": payload[\"generated_at\"],"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "/stats",
+        "window": [
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports.",
+          "6: "
+        ]
+      },
+      {
+        "line": 22,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "/stats",
+        "window": [
+          "20: ",
+          "21: def fetch_stats():",
+          "22:     \"\"\"Return aggregate counts from GET /stats.\"\"\"",
+          "23:     response = requests.get(f\"{API_BASE}/stats\", timeout=HTTP_TIMEOUT)",
+          "24:     response.raise_for_status()"
+        ]
+      },
+      {
+        "line": 23,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "/stats",
+        "window": [
+          "21: def fetch_stats():",
+          "22:     \"\"\"Return aggregate counts from GET /stats.\"\"\"",
+          "23:     response = requests.get(f\"{API_BASE}/stats\", timeout=HTTP_TIMEOUT)",
+          "24:     response.raise_for_status()",
+          "25:     payload = response.json()"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "docs/versioning.md",
+        "repo": "acme-contracts",
+        "token": "/stats",
+        "window": [
+          "6: ```",
+          "7: GET /v1/links/:id",
+          "8: GET /v1/stats",
+          "9: ```",
+          "10: "
+        ]
+      },
+      {
+        "line": 4,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "toISOString",
+        "window": [
+          "2: ",
+          "3: All timestamps in API responses must be UTC ISO-8601, e.g.",
+          "4: `2024-01-01T12:00:00.000Z`, as produced by `new Date().toISOString()`.",
+          "5: ",
+          "6: Never emit locale-formatted or local-timezone timestamps (for example"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "toISOString",
+        "window": [
+          "15: | Language | Use | Never use |",
+          "16: |---|---|---|",
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "src/format.ts",
+        "repo": "acme-shared",
+        "token": "toISOString",
+        "window": [
+          "8: // callers routinely hand us a value straight out of an API response.",
+          "9: export function formatTimestamp(value: Date | string): string {",
+          "10:   return new Date(value).toISOString();",
+          "11: }"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "stats",
+        "window": [
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports.",
+          "6: "
+        ]
+      },
+      {
+        "line": 22,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "stats",
+        "window": [
+          "20: ",
+          "21: def fetch_stats():",
+          "22:     \"\"\"Return aggregate counts from GET /stats.\"\"\"",
+          "23:     response = requests.get(f\"{API_BASE}/stats\", timeout=HTTP_TIMEOUT)",
+          "24:     response.raise_for_status()"
+        ]
+      },
+      {
+        "line": 23,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "stats",
+        "window": [
+          "21: def fetch_stats():",
+          "22:     \"\"\"Return aggregate counts from GET /stats.\"\"\"",
+          "23:     response = requests.get(f\"{API_BASE}/stats\", timeout=HTTP_TIMEOUT)",
+          "24:     response.raise_for_status()",
+          "25:     payload = response.json()"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "docs/versioning.md",
+        "repo": "acme-contracts",
+        "token": "stats",
+        "window": [
+          "6: ```",
+          "7: GET /v1/links/:id",
+          "8: GET /v1/stats",
+          "9: ```",
+          "10: "
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-analytics",
+        "score": 18.0,
+        "signals": [
+          "/stats",
+          "active_links",
+          "generated_at",
+          "stats",
+          "total_links"
+        ]
+      },
+      {
+        "repo": "acme-contracts",
+        "score": 4.0,
+        "signals": [
+          "/stats",
+          "stats",
+          "toISOString"
+        ]
+      },
+      {
+        "repo": "acme-shared",
+        "score": 1.0,
+        "signals": [
+          "toISOString"
+        ]
+      }
+    ],
+    "searched": [
+      "active_links",
+      "generated_at",
+      "total_links",
+      "handleStats",
+      "/stats",
+      "toISOString",
+      "handlers",
+      "express",
+      "stats"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "removed"
+        ],
+        "token": "active_links",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "removed"
+        ],
+        "token": "generated_at",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "removed"
+        ],
+        "token": "total_links",
+        "weight": 5
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "removed"
+        ],
+        "token": "handleStats",
+        "weight": 4
+      },
+      {
+        "kind": "route",
+        "polarity": [
+          "removed"
+        ],
+        "token": "/stats",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "toISOString",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "handlers",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "express",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "stats",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "contract-break-removed-enum-member": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 10,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "archived",
+        "window": [
+          "8: STATUS_ACTIVE = \"active\"",
+          "9: STATUS_EXPIRED = \"expired\"",
+          "10: STATUS_ARCHIVED = \"archived\"",
+          "11: ",
+          "12: REPORTABLE_STATUSES = (STATUS_ACTIVE, STATUS_EXPIRED, STATUS_ARCHIVED)"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-analytics",
+        "score": 2.0,
+        "signals": [
+          "archived"
+        ]
+      }
+    ],
+    "searched": [
+      "Archived",
+      "archived"
+    ],
+    "signals": [
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "Archived",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "archived",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "contract-break-status-code": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 12,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "available",
+        "window": [
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")",
+          "13: ",
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "not_found",
+        "window": [
+          "4: ",
+          "5: ```json",
+          "6: { \"error\": { \"code\": \"not_found\", \"message\": \"human readable detail\" } }",
+          "7: ```",
+          "8: "
+        ]
+      },
+      {
+        "line": 16,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "not_found",
+        "window": [
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any",
+          "15: // other code is treated as an upstream fault rather than a missing link.",
+          "16: const codeNotFound = \"not_found\"",
+          "17: ",
+          "18: // Link is the gateway's view of the link API response. Only the fields the"
+        ]
+      },
+      {
+        "line": 2,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "not_found",
+        "window": [
+          "1: export const ERROR_CODES = {",
+          "2:   NOT_FOUND: \"not_found\",",
+          "3:   INVALID_URL: \"invalid_url\",",
+          "4: } as const;"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "message",
+        "window": [
+          "4: ",
+          "5: ```json",
+          "6: { \"error\": { \"code\": \"not_found\", \"message\": \"human readable detail\" } }",
+          "7: ```",
+          "8: "
+        ]
+      },
+      {
+        "line": 10,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "message",
+        "window": [
+          "8: ",
+          "9: - `code` is a stable, machine-readable string.",
+          "10: - `message` is human-readable and may change.",
+          "11: ",
+          "12: Never return a bare string as an error body. Clients parse `error.code` and"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "message",
+        "window": [
+          "6: \tError struct {",
+          "7: \t\tCode    string `json:\"code\"`",
+          "8: \t\tMessage string `json:\"message\"`",
+          "9: \t} `json:\"error\"`",
+          "10: }"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "message",
+        "window": [
+          "4: } as const;",
+          "5: ",
+          "6: // Wraps an error code and message in the standard envelope defined by",
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "message",
+        "window": [
+          "6: // Wraps an error code and message in the standard envelope defined by",
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {",
+          "9:   return { error: { code, message } };",
+          "10: }"
+        ]
+      },
+      {
+        "line": 9,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "message",
+        "window": [
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {",
+          "9:   return { error: { code, message } };",
+          "10: }"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "15:         \"id\": payload[\"id\"],",
+          "16:         \"created_at\": payload[\"created_at\"],",
+          "17:         \"status\": payload[\"status\"],",
+          "18:     }",
+          "19: "
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "1: \"\"\"Link lifecycle states, mirrored from the link API's status enum.",
+          "2: ",
+          "3: The API owns these values. This module exists so the reporting code has one"
+        ]
+      },
+      {
+        "line": 15,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "13: ",
+          "14: ",
+          "15: def is_reportable(status):",
+          "16:     \"\"\"Whether a link in this state should appear in a report.\"\"\"",
+          "17:     return status in REPORTABLE_STATUSES"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "15: def is_reportable(status):",
+          "16:     \"\"\"Whether a link in this state should appear in a report.\"\"\"",
+          "17:     return status in REPORTABLE_STATUSES"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "status",
+        "window": [
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly.",
+          "6: "
+        ]
+      },
+      {
+        "line": 13,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "status",
+        "window": [
+          "11: ",
+          "12: // IsMissing reports whether an error envelope describes a link the API could",
+          "13: // not serve, by matching the documented error code rather than the status line.",
+          "14: func IsMissing(body envelope) bool {",
+          "15: \treturn body.Error.Code == codeNotFound"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "code",
+        "window": [
+          "1: \"\"\"Link lifecycle states, mirrored from the link API's status enum.",
+          "2: ",
+          "3: The API owns these values. This module exists so the reporting code has one",
+          "4: place to change when the API's set of states changes \u2014 which it has no way of",
+          "5: learning about automatically, because nothing but HTTP connects the two."
+        ]
+      },
+      {
+        "line": 6,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "code",
+        "window": [
+          "4: ",
+          "5: ```json",
+          "6: { \"error\": { \"code\": \"not_found\", \"message\": \"human readable detail\" } }",
+          "7: ```",
+          "8: "
+        ]
+      },
+      {
+        "line": 9,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "code",
+        "window": [
+          "7: ```",
+          "8: ",
+          "9: - `code` is a stable, machine-readable string.",
+          "10: - `message` is human-readable and may change.",
+          "11: "
+        ]
+      },
+      {
+        "line": 12,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "code",
+        "window": [
+          "10: - `message` is human-readable and may change.",
+          "11: ",
+          "12: Never return a bare string as an error body. Clients parse `error.code` and",
+          "13: will break on a plain-text body."
+        ]
+      },
+      {
+        "line": 7,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "code",
+        "window": [
+          "5: type envelope struct {",
+          "6: \tError struct {",
+          "7: \t\tCode    string `json:\"code\"`",
+          "8: \t\tMessage string `json:\"message\"`",
+          "9: \t} `json:\"error\"`"
+        ]
+      },
+      {
+        "line": 13,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "code",
+        "window": [
+          "11: ",
+          "12: // IsMissing reports whether an error envelope describes a link the API could",
+          "13: // not serve, by matching the documented error code rather than the status line.",
+          "14: func IsMissing(body envelope) bool {",
+          "15: \treturn body.Error.Code == codeNotFound"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "code",
+        "window": [
+          "8: )",
+          "9: ",
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")"
+        ]
+      },
+      {
+        "line": 14,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "code",
+        "window": [
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")",
+          "13: ",
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any",
+          "15: // other code is treated as an upstream fault rather than a missing link.",
+          "16: const codeNotFound = \"not_found\""
+        ]
+      },
+      {
+        "line": 15,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "code",
+        "window": [
+          "13: ",
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any",
+          "15: // other code is treated as an upstream fault rather than a missing link.",
+          "16: const codeNotFound = \"not_found\"",
+          "17: "
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "code",
+        "window": [
+          "4: } as const;",
+          "5: ",
+          "6: // Wraps an error code and message in the standard envelope defined by",
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "code",
+        "window": [
+          "6: // Wraps an error code and message in the standard envelope defined by",
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {",
+          "9:   return { error: { code, message } };",
+          "10: }"
+        ]
+      },
+      {
+        "line": 9,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "code",
+        "window": [
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {",
+          "9:   return { error: { code, message } };",
+          "10: }"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: # acme-analytics",
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports.",
+          "6: "
+        ]
+      },
+      {
+        "line": 4,
+        "path": "pyproject.toml",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "2: name = \"acme-analytics\"",
+          "3: version = \"1.0.0\"",
+          "4: description = \"Reporting client for the Acme link service.\"",
+          "5: requires-python = \">=3.11\"",
+          "6: dependencies = ["
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/__init__.py",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: \"\"\"Reporting client for the Acme link service.\"\"\"",
+          "2: ",
+          "3: __version__ = \"1.0.0\""
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: \"\"\"HTTP client for the link API.\"\"\"",
+          "2: ",
+          "3: import requests"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "1: # acme-gateway",
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "1: package client",
+          "2: ",
+          "3: // envelope mirrors the error body the link API returns, as documented by the",
+          "4: // organisation's conventions repository.",
+          "5: type envelope struct {"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "10: }",
+          "11: ",
+          "12: // IsMissing reports whether an error envelope describes a link the API could",
+          "13: // not serve, by matching the documented error code rather than the status line.",
+          "14: func IsMissing(body envelope) bool {"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "8: )",
+          "9: ",
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")",
+          "13: ",
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "1: # acme-web",
+          "2: ",
+          "3: Browser client for the Acme link service. It fetches links from `acme-api` and",
+          "4: renders them. Shared helpers (URL validation, formatting) come from",
+          "5: `acme-shared` rather than being reimplemented here."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "2:   \"name\": \"acme-web\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Web client that consumes the acme-api link response.\",",
+          "5:   \"main\": \"src/render.ts\",",
+          "6:   \"dependencies\": {"
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/api/links.ts",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "1: // Client-side view of the acme-api link response. These fields mirror the",
+          "2: // shape owned by acme-api; they must stay in sync with that repo's contract.",
+          "3: export interface LinkView {"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/format.ts",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "1: import { formatTimestamp } from \"acme-shared\";",
+          "2: ",
+          "3: // Renders a link's creation time for display. The API sends it as an",
+          "4: // already-serialised ISO string, which is what we hand to the shared formatter.",
+          "5: export function displayCreatedAt(createdAt: string): string {"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-gateway",
+        "score": 5.5,
+        "signals": [
+          "available",
+          "code",
+          "link",
+          "message",
+          "not_found",
+          "status"
+        ]
+      },
+      {
+        "repo": "acme-analytics",
+        "score": 2.167,
+        "signals": [
+          "code",
+          "link",
+          "status"
+        ]
+      },
+      {
+        "repo": "acme-contracts",
+        "score": 1.833,
+        "signals": [
+          "code",
+          "message",
+          "not_found"
+        ]
+      },
+      {
+        "repo": "acme-shared",
+        "score": 1.833,
+        "signals": [
+          "code",
+          "message",
+          "not_found"
+        ]
+      },
+      {
+        "repo": "acme-web",
+        "score": 0.667,
+        "signals": [
+          "link"
+        ]
+      }
+    ],
+    "searched": [
+      "available",
+      "not_found",
+      "message",
+      "longer",
+      "status",
+      "found",
+      "code",
+      "gone",
+      "link"
+    ],
+    "signals": [
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "available",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "not_found",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "message",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "longer",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "status",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "removed"
+        ],
+        "token": "found",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "code",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "gone",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "link",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "contract-break-type-narrowing": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 1,
+        "path": "src/format.ts",
+        "repo": "acme-web",
+        "token": "formatTimestamp",
+        "window": [
+          "1: import { formatTimestamp } from \"acme-shared\";",
+          "2: ",
+          "3: // Renders a link's creation time for display. The API sends it as an"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/format.ts",
+        "repo": "acme-web",
+        "token": "formatTimestamp",
+        "window": [
+          "4: // already-serialised ISO string, which is what we hand to the shared formatter.",
+          "5: export function displayCreatedAt(createdAt: string): string {",
+          "6:   return formatTimestamp(createdAt);",
+          "7: }"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "toISOString",
+        "window": [
+          "6:     id: normalizeShortCode(id),",
+          "7:     url,",
+          "8:     created_at: new Date().toISOString(),",
+          "9:     expires_at: null,",
+          "10:     status: LinkStatus.Active,"
+        ]
+      },
+      {
+        "line": 9,
+        "path": "src/handlers/stats.ts",
+        "repo": "acme-api",
+        "token": "toISOString",
+        "window": [
+          "7:     total_links: 0,",
+          "8:     active_links: 0,",
+          "9:     generated_at: new Date().toISOString(),",
+          "10:   });",
+          "11: }"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "toISOString",
+        "window": [
+          "2: ",
+          "3: All timestamps in API responses must be UTC ISO-8601, e.g.",
+          "4: `2024-01-01T12:00:00.000Z`, as produced by `new Date().toISOString()`.",
+          "5: ",
+          "6: Never emit locale-formatted or local-timezone timestamps (for example"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "toISOString",
+        "window": [
+          "15: | Language | Use | Never use |",
+          "16: |---|---|---|",
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-web",
+        "score": 4.0,
+        "signals": [
+          "formatTimestamp"
+        ]
+      },
+      {
+        "repo": "acme-api",
+        "score": 1.0,
+        "signals": [
+          "toISOString"
+        ]
+      },
+      {
+        "repo": "acme-contracts",
+        "score": 1.0,
+        "signals": [
+          "toISOString"
+        ]
+      }
+    ],
+    "searched": [
+      "formatTimestamp",
+      "toISOString"
+    ],
+    "signals": [
+      {
+        "kind": "function",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "formatTimestamp",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "toISOString",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "convention-endpoint-drift": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 7,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "toLocaleString",
+        "window": [
+          "5: ",
+          "6: Never emit locale-formatted or local-timezone timestamps (for example",
+          "7: `new Date().toLocaleString()`): they are ambiguous across regions and are not",
+          "8: machine-parseable.",
+          "9: "
+        ]
+      },
+      {
+        "line": 17,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "toLocaleString",
+        "window": [
+          "15: | Language | Use | Never use |",
+          "16: |---|---|---|",
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "15:         \"id\": payload[\"id\"],",
+          "16:         \"created_at\": payload[\"created_at\"],",
+          "17:         \"status\": payload[\"status\"],",
+          "18:     }",
+          "19: "
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "1: \"\"\"Link lifecycle states, mirrored from the link API's status enum.",
+          "2: ",
+          "3: The API owns these values. This module exists so the reporting code has one"
+        ]
+      },
+      {
+        "line": 15,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "13: ",
+          "14: ",
+          "15: def is_reportable(status):",
+          "16:     \"\"\"Whether a link in this state should appear in a report.\"\"\"",
+          "17:     return status in REPORTABLE_STATUSES"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "src/acme_analytics/status.py",
+        "repo": "acme-analytics",
+        "token": "status",
+        "window": [
+          "15: def is_reportable(status):",
+          "16:     \"\"\"Whether a link in this state should appear in a report.\"\"\"",
+          "17:     return status in REPORTABLE_STATUSES"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "status",
+        "window": [
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly.",
+          "6: "
+        ]
+      },
+      {
+        "line": 13,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "status",
+        "window": [
+          "11: ",
+          "12: // IsMissing reports whether an error envelope describes a link the API could",
+          "13: // not serve, by matching the documented error code rather than the status line.",
+          "14: func IsMissing(body envelope) bool {",
+          "15: \treturn body.Error.Code == codeNotFound"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "https",
+        "window": [
+          "3: import requests",
+          "4: ",
+          "5: API_BASE = \"https://api.acme.example\"",
+          "6: HTTP_TIMEOUT = 10",
+          "7: "
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/validateUrl.ts",
+        "repo": "acme-shared",
+        "token": "https",
+        "window": [
+          "1: const ALLOWED_PROTOCOLS = [\"http:\", \"https:\"];",
+          "2: ",
+          "3: // Canonical URL validation for the organisation. Consumers should import this"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: # acme-analytics",
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports.",
+          "6: "
+        ]
+      },
+      {
+        "line": 4,
+        "path": "pyproject.toml",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "2: name = \"acme-analytics\"",
+          "3: version = \"1.0.0\"",
+          "4: description = \"Reporting client for the Acme link service.\"",
+          "5: requires-python = \">=3.11\"",
+          "6: dependencies = ["
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/__init__.py",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: \"\"\"Reporting client for the Acme link service.\"\"\"",
+          "2: ",
+          "3: __version__ = \"1.0.0\""
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: \"\"\"HTTP client for the link API.\"\"\"",
+          "2: ",
+          "3: import requests"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "1: # acme-gateway",
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "1: package client",
+          "2: ",
+          "3: // envelope mirrors the error body the link API returns, as documented by the",
+          "4: // organisation's conventions repository.",
+          "5: type envelope struct {"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "10: }",
+          "11: ",
+          "12: // IsMissing reports whether an error envelope describes a link the API could",
+          "13: // not serve, by matching the documented error code rather than the status line.",
+          "14: func IsMissing(body envelope) bool {"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "8: )",
+          "9: ",
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")",
+          "13: ",
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "1: # acme-web",
+          "2: ",
+          "3: Browser client for the Acme link service. It fetches links from `acme-api` and",
+          "4: renders them. Shared helpers (URL validation, formatting) come from",
+          "5: `acme-shared` rather than being reimplemented here."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "2:   \"name\": \"acme-web\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Web client that consumes the acme-api link response.\",",
+          "5:   \"main\": \"src/render.ts\",",
+          "6:   \"dependencies\": {"
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/api/links.ts",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "1: // Client-side view of the acme-api link response. These fields mirror the",
+          "2: // shape owned by acme-api; they must stay in sync with that repo's contract.",
+          "3: export interface LinkView {"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/format.ts",
+        "repo": "acme-web",
+        "token": "link",
+        "window": [
+          "1: import { formatTimestamp } from \"acme-shared\";",
+          "2: ",
+          "3: // Renders a link's creation time for display. The API sends it as an",
+          "4: // already-serialised ISO string, which is what we hand to the shared formatter.",
+          "5: export function displayCreatedAt(createdAt: string): string {"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-analytics",
+        "score": 2.667,
+        "signals": [
+          "https",
+          "link",
+          "status"
+        ]
+      },
+      {
+        "repo": "acme-contracts",
+        "score": 2.0,
+        "signals": [
+          "toLocaleString"
+        ]
+      },
+      {
+        "repo": "acme-gateway",
+        "score": 1.667,
+        "signals": [
+          "link",
+          "status"
+        ]
+      },
+      {
+        "repo": "acme-shared",
+        "score": 1.0,
+        "signals": [
+          "https"
+        ]
+      },
+      {
+        "repo": "acme-web",
+        "score": 0.667,
+        "signals": [
+          "link"
+        ]
+      }
+    ],
+    "searched": [
+      "accessed_at",
+      "handleRedirect",
+      "/r/:id",
+      "lookup",
+      "toLocaleString",
+      "redirects",
+      "handlers",
+      "express",
+      "status",
+      "target",
+      "found",
+      "https",
+      "link",
+      "send"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "accessed_at",
+        "weight": 5
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "handleRedirect",
+        "weight": 4
+      },
+      {
+        "kind": "route",
+        "polarity": [
+          "added"
+        ],
+        "token": "/r/:id",
+        "weight": 4
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "lookup",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "toLocaleString",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "redirects",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "handlers",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "express",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "status",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "target",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "found",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "https",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "link",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "send",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "convention-local-timestamps": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 3,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "body",
+        "window": [
+          "1: import { LinkStatus, type LinkResponse } from \"../types\";",
+          "2: ",
+          "3: // Builds the JSON body returned by GET /links/:id.",
+          "4: export function buildLinkResponse(id: string, url: string): LinkResponse {",
+          "5:   return {"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "body",
+        "window": [
+          "1: # Error envelope",
+          "2: ",
+          "3: Every error response body must be a JSON object of the form:",
+          "4: ",
+          "5: ```json"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "body",
+        "window": [
+          "10: - `message` is human-readable and may change.",
+          "11: ",
+          "12: Never return a bare string as an error body. Clients parse `error.code` and",
+          "13: will break on a plain-text body."
+        ]
+      },
+      {
+        "line": 13,
+        "path": "docs/error-envelope.md",
+        "repo": "acme-contracts",
+        "token": "body",
+        "window": [
+          "11: ",
+          "12: Never return a bare string as an error body. Clients parse `error.code` and",
+          "13: will break on a plain-text body."
+        ]
+      },
+      {
+        "line": 19,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "RFC1123",
+        "window": [
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: ",
+          "21: The shared library exposes the format as `TIMESTAMP_FORMAT` so services that"
+        ]
+      },
+      {
+        "line": 19,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "Format",
+        "window": [
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: ",
+          "21: The shared library exposes the format as `TIMESTAMP_FORMAT` so services that"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-contracts",
+        "score": 6.5,
+        "signals": [
+          "Format",
+          "RFC1123",
+          "body"
+        ]
+      },
+      {
+        "repo": "acme-api",
+        "score": 2.5,
+        "signals": [
+          "body"
+        ]
+      }
+    ],
+    "searched": [
+      "CheckedAt",
+      "Entries",
+      "body",
+      "statusBody",
+      "ResponseWriter",
+      "HandleStatus",
+      "application",
+      "NewEncoder",
+      "checked_at",
+      "encoding",
+      "Content",
+      "RFC1123",
+      "entries",
+      "Encode",
+      "Format"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "CheckedAt",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "Entries",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "body",
+        "weight": 5
+      },
+      {
+        "kind": "class",
+        "polarity": [
+          "added"
+        ],
+        "token": "statusBody",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "ResponseWriter",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "HandleStatus",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "application",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "NewEncoder",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "checked_at",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "encoding",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Content",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "RFC1123",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "entries",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Encode",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Format",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Header",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "cache",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "func",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "http",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "time",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Now",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "net",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "convention-unversioned-endpoint": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [],
+    "ranked_repos": [],
+    "searched": [
+      "count",
+      "handleExports",
+      "/exports",
+      "handlers",
+      "express"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "count",
+        "weight": 5
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "handleExports",
+        "weight": 4
+      },
+      {
+        "kind": "route",
+        "polarity": [
+          "added"
+        ],
+        "token": "/exports",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "handlers",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "express",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "cross-repo-conflict-page-limit": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 10,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "DEFAULT_LINKS_PER_PAGE",
+        "window": [
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "DEFAULT_LINKS_PER_PAGE",
+        "window": [
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";",
+          "4: export { retryWithBackoff } from \"./retry\";",
+          "5: export { MAX_LINKS_PER_PAGE, DEFAULT_LINKS_PER_PAGE } from \"./limits\";"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/limits.ts",
+        "repo": "acme-shared",
+        "token": "DEFAULT_LINKS_PER_PAGE",
+        "window": [
+          "3: // API, the clients and the reporting tools agree on one number.",
+          "4: export const MAX_LINKS_PER_PAGE = 50;",
+          "5: export const DEFAULT_LINKS_PER_PAGE = 20;"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "MAX_LINKS_PER_PAGE",
+        "window": [
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "MAX_LINKS_PER_PAGE",
+        "window": [
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";",
+          "4: export { retryWithBackoff } from \"./retry\";",
+          "5: export { MAX_LINKS_PER_PAGE, DEFAULT_LINKS_PER_PAGE } from \"./limits\";"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/limits.ts",
+        "repo": "acme-shared",
+        "token": "MAX_LINKS_PER_PAGE",
+        "window": [
+          "2: // different page size changes it here rather than redefining it locally, so the",
+          "3: // API, the clients and the reporting tools agree on one number.",
+          "4: export const MAX_LINKS_PER_PAGE = 50;",
+          "5: export const DEFAULT_LINKS_PER_PAGE = 20;"
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/limits.ts",
+        "repo": "acme-shared",
+        "token": "Pagination",
+        "window": [
+          "1: // Pagination limits shared by every Acme service. A service that needs a",
+          "2: // different page size changes it here rather than redefining it locally, so the",
+          "3: // API, the clients and the reporting tools agree on one number."
+        ]
+      },
+      {
+        "line": 11,
+        "path": "README.md",
+        "repo": "acme-api",
+        "token": "reporting",
+        "window": [
+          "9: - `GET /links/:id` \u2014 returns a single link as JSON.",
+          "10: - `GET /resolve/:id` \u2014 resolves a short code to its destination.",
+          "11: - `GET /stats` \u2014 aggregate counts for reporting clients."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/handlers/stats.ts",
+        "repo": "acme-api",
+        "token": "reporting",
+        "window": [
+          "1: import type { Request, Response } from \"express\";",
+          "2: ",
+          "3: // Aggregate counts for the reporting clients. This is the only endpoint that",
+          "4: // exposes organisation-wide totals rather than a single link.",
+          "5: export function handleStats(_req: Request, res: Response): void {"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/limits.ts",
+        "repo": "acme-shared",
+        "token": "reporting",
+        "window": [
+          "1: // Pagination limits shared by every Acme service. A service that needs a",
+          "2: // different page size changes it here rather than redefining it locally, so the",
+          "3: // API, the clients and the reporting tools agree on one number.",
+          "4: export const MAX_LINKS_PER_PAGE = 50;",
+          "5: export const DEFAULT_LINKS_PER_PAGE = 20;"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "records",
+        "window": [
+          "6: ",
+          "7: Written in Go. Like `acme-analytics`, it reaches the API over HTTP only, so no",
+          "8: JavaScript manifest in the organisation records that this dependency exists."
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "timeout",
+        "window": [
+          "4: // The organisation's retry policy: bounded attempts with exponential backoff.",
+          "5: // Services calling each other should import this rather than writing their own",
+          "6: // loop, so timeout behaviour is uniform across the org.",
+          "7: export async function retryWithBackoff<T>(",
+          "8:   operation: () => Promise<T>,"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "limits",
+        "window": [
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "limits",
+        "window": [
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";",
+          "4: export { retryWithBackoff } from \"./retry\";",
+          "5: export { MAX_LINKS_PER_PAGE, DEFAULT_LINKS_PER_PAGE } from \"./limits\";"
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/limits.ts",
+        "repo": "acme-shared",
+        "token": "limits",
+        "window": [
+          "1: // Pagination limits shared by every Acme service. A service that needs a",
+          "2: // different page size changes it here rather than redefining it locally, so the",
+          "3: // API, the clients and the reporting tools agree on one number."
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-shared",
+        "score": 11.0,
+        "signals": [
+          "DEFAULT_LINKS_PER_PAGE",
+          "MAX_LINKS_PER_PAGE",
+          "Pagination",
+          "limits",
+          "reporting",
+          "timeout"
+        ]
+      },
+      {
+        "repo": "acme-gateway",
+        "score": 2.0,
+        "signals": [
+          "records"
+        ]
+      },
+      {
+        "repo": "acme-api",
+        "score": 1.0,
+        "signals": [
+          "reporting"
+        ]
+      }
+    ],
+    "searched": [
+      "fetch_link_page",
+      "DEFAULT_LINKS_PER_PAGE",
+      "MAX_LINKS_PER_PAGE",
+      "raise_for_status",
+      "HTTP_TIMEOUT",
+      "Pagination",
+      "reporting",
+      "API_BASE",
+      "per_page",
+      "requests",
+      "queries",
+      "records",
+      "timeout",
+      "capped",
+      "limits"
+    ],
+    "signals": [
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "fetch_link_page",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "DEFAULT_LINKS_PER_PAGE",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "MAX_LINKS_PER_PAGE",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "raise_for_status",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "HTTP_TIMEOUT",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Pagination",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "reporting",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "API_BASE",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "per_page",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "requests",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "queries",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "records",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "timeout",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "capped",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "limits",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "report",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "limit",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "links",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "link",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "page",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "size",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "min",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "one",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "the",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "duplicate-logic-date-formatting": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 21,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "TIMESTAMP_FORMAT",
+        "window": [
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: ",
+          "21: The shared library exposes the format as `TIMESTAMP_FORMAT` so services that",
+          "22: must build the string by hand still agree on one layout."
+        ]
+      },
+      {
+        "line": 7,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "TIMESTAMP_FORMAT",
+        "window": [
+          "5: ",
+          "6: - `validateUrl` \u2014 canonical URL validation.",
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/format.ts",
+        "repo": "acme-shared",
+        "token": "TIMESTAMP_FORMAT",
+        "window": [
+          "2: // convention: UTC ISO-8601 with milliseconds. Named so services in other",
+          "3: // languages can refer to the same constant.",
+          "4: export const TIMESTAMP_FORMAT = \"YYYY-MM-DDTHH:mm:ss.sssZ\";",
+          "5: ",
+          "6: // UTC ISO-8601 timestamp formatting, per the acme-contracts convention."
+        ]
+      },
+      {
+        "line": 2,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "TIMESTAMP_FORMAT",
+        "window": [
+          "1: export { validateUrl } from \"./validateUrl\";",
+          "2: export { formatTimestamp, TIMESTAMP_FORMAT } from \"./format\";",
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";",
+          "4: export { retryWithBackoff } from \"./retry\";"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "formatting",
+        "window": [
+          "5: ",
+          "6: - `validateUrl` \u2014 canonical URL validation.",
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-shared",
+        "token": "formatting",
+        "window": [
+          "2:   \"name\": \"acme-shared\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Shared helpers for the Acme organisation: URL validation, formatting, error constants.\",",
+          "5:   \"main\": \"src/index.ts\"",
+          "6: }"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/format.ts",
+        "repo": "acme-shared",
+        "token": "formatting",
+        "window": [
+          "4: export const TIMESTAMP_FORMAT = \"YYYY-MM-DDTHH:mm:ss.sssZ\";",
+          "5: ",
+          "6: // UTC ISO-8601 timestamp formatting, per the acme-contracts convention.",
+          "7: // Accepts either a Date or an already-serialised timestamp string, because",
+          "8: // callers routinely hand us a value straight out of an API response."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-web",
+        "token": "formatting",
+        "window": [
+          "2: ",
+          "3: Browser client for the Acme link service. It fetches links from `acme-api` and",
+          "4: renders them. Shared helpers (URL validation, formatting) come from",
+          "5: `acme-shared` rather than being reimplemented here."
+        ]
+      },
+      {
+        "line": 7,
+        "path": "CONVENTIONS.md",
+        "repo": "acme-contracts",
+        "token": "timestamps",
+        "window": [
+          "5: ",
+          "6: 1. **Errors** use the standard envelope. See `docs/error-envelope.md`.",
+          "7: 2. **Timestamps** in responses are UTC ISO-8601. See `docs/timestamps.md`.",
+          "8: 3. **Versioning** is by major version in the path (`/v1/...`) for every public",
+          "9:    endpoint. See `docs/versioning.md`."
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-contracts",
+        "token": "timestamps",
+        "window": [
+          "7: - `CONVENTIONS.md` \u2014 index of the conventions.",
+          "8: - `docs/error-envelope.md` \u2014 the required error response shape.",
+          "9: - `docs/timestamps.md` \u2014 the required timestamp format, per language.",
+          "10: - `docs/versioning.md` \u2014 how public endpoints are versioned."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "timestamps",
+        "window": [
+          "1: # Timestamps",
+          "2: ",
+          "3: All timestamps in API responses must be UTC ISO-8601, e.g.",
+          "4: `2024-01-01T12:00:00.000Z`, as produced by `new Date().toISOString()`.",
+          "5: "
+        ]
+      },
+      {
+        "line": 6,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "timestamps",
+        "window": [
+          "4: `2024-01-01T12:00:00.000Z`, as produced by `new Date().toISOString()`.",
+          "5: ",
+          "6: Never emit locale-formatted or local-timezone timestamps (for example",
+          "7: `new Date().toLocaleString()`): they are ambiguous across regions and are not",
+          "8: machine-parseable."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-contracts",
+        "token": "timestamps",
+        "window": [
+          "2:   \"name\": \"@acme/contracts\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Organisation-wide API conventions: error envelope, timestamps, versioning.\",",
+          "5:   \"files\": [",
+          "6:     \"CONVENTIONS.md\","
+        ]
+      },
+      {
+        "line": 18,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "datetime",
+        "window": [
+          "16: |---|---|---|",
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: "
+        ]
+      },
+      {
+        "line": 4,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "produced",
+        "window": [
+          "2: ",
+          "3: All timestamps in API responses must be UTC ISO-8601, e.g.",
+          "4: `2024-01-01T12:00:00.000Z`, as produced by `new Date().toISOString()`.",
+          "5: ",
+          "6: Never emit locale-formatted or local-timezone timestamps (for example"
+        ]
+      },
+      {
+        "line": 18,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "strftime",
+        "window": [
+          "16: |---|---|---|",
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: "
+        ]
+      },
+      {
+        "line": 6,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "timezone",
+        "window": [
+          "4: `2024-01-01T12:00:00.000Z`, as produced by `new Date().toISOString()`.",
+          "5: ",
+          "6: Never emit locale-formatted or local-timezone timestamps (for example",
+          "7: `new Date().toLocaleString()`): they are ambiguous across regions and are not",
+          "8: machine-parseable."
+        ]
+      },
+      {
+        "line": 18,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "timezone",
+        "window": [
+          "16: |---|---|---|",
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: "
+        ]
+      },
+      {
+        "line": 20,
+        "path": "docs/versioning.md",
+        "repo": "acme-contracts",
+        "token": "moment",
+        "window": [
+          "18: ",
+          "19: There is no grace period for this rule. An unversioned public path is a",
+          "20: permanent commitment the moment a client calls it."
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-contracts",
+        "score": 13.0,
+        "signals": [
+          "TIMESTAMP_FORMAT",
+          "datetime",
+          "moment",
+          "produced",
+          "strftime",
+          "timestamps",
+          "timezone"
+        ]
+      },
+      {
+        "repo": "acme-shared",
+        "score": 2.0,
+        "signals": [
+          "TIMESTAMP_FORMAT",
+          "formatting"
+        ]
+      },
+      {
+        "repo": "acme-web",
+        "score": 1.0,
+        "signals": [
+          "formatting"
+        ]
+      }
+    ],
+    "searched": [
+      "format_timestamp",
+      "render_footer",
+      "TIMESTAMP_FORMAT",
+      "astimezone",
+      "formatting",
+      "timestamps",
+      "Timestamp",
+      "datetime",
+      "produced",
+      "stamping",
+      "strftime",
+      "timezone",
+      "Footer",
+      "Render",
+      "moment"
+    ],
+    "signals": [
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "format_timestamp",
+        "weight": 4
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "render_footer",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "TIMESTAMP_FORMAT",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "astimezone",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "formatting",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "timestamps",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Timestamp",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "datetime",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "produced",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "stamping",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "strftime",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "timezone",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Footer",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Render",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "moment",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "output",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "report",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "line",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "when",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "ISO",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "UTC",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "the",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "utc",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "was",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "duplicate-logic-local-validator": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 6,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "validateUrl",
+        "window": [
+          "4: logic in a consumer:",
+          "5: ",
+          "6: - `validateUrl` \u2014 canonical URL validation.",
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers."
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "validateUrl",
+        "window": [
+          "1: export { validateUrl } from \"./validateUrl\";",
+          "2: export { formatTimestamp, TIMESTAMP_FORMAT } from \"./format\";",
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/validateUrl.ts",
+        "repo": "acme-shared",
+        "token": "validateUrl",
+        "window": [
+          "3: // Canonical URL validation for the organisation. Consumers should import this",
+          "4: // rather than writing their own check.",
+          "5: export function validateUrl(candidate: string): boolean {",
+          "6:   try {",
+          "7:     const parsed = new URL(candidate);"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/validateUrl.ts",
+        "repo": "acme-shared",
+        "token": "candidate",
+        "window": [
+          "3: // Canonical URL validation for the organisation. Consumers should import this",
+          "4: // rather than writing their own check.",
+          "5: export function validateUrl(candidate: string): boolean {",
+          "6:   try {",
+          "7:     const parsed = new URL(candidate);"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "src/validateUrl.ts",
+        "repo": "acme-shared",
+        "token": "candidate",
+        "window": [
+          "5: export function validateUrl(candidate: string): boolean {",
+          "6:   try {",
+          "7:     const parsed = new URL(candidate);",
+          "8:     return ALLOWED_PROTOCOLS.includes(parsed.protocol);",
+          "9:   } catch {"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "http",
+        "window": [
+          "4: \t\"encoding/json\"",
+          "5: \t\"errors\"",
+          "6: \t\"net/http\"",
+          "7: \t\"time\"",
+          "8: )"
+        ]
+      },
+      {
+        "line": 27,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "http",
+        "window": [
+          "25: // Fetch retrieves a single link from the link API.",
+          "26: func Fetch(base string, shortCode string) (*Link, error) {",
+          "27: \tresp, err := http.Get(base + \"/links/\" + shortCode)",
+          "28: \tif err != nil {",
+          "29: \t\treturn nil, err"
+        ]
+      },
+      {
+        "line": 33,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "http",
+        "window": [
+          "31: \tdefer resp.Body.Close()",
+          "32: ",
+          "33: \tif resp.StatusCode == http.StatusNotFound {",
+          "34: \t\treturn nil, ErrLinkNotFound",
+          "35: \t}"
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/validateUrl.ts",
+        "repo": "acme-shared",
+        "token": "http",
+        "window": [
+          "1: const ALLOWED_PROTOCOLS = [\"http:\", \"https:\"];",
+          "2: ",
+          "3: // Canonical URL validation for the organisation. Consumers should import this"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: # acme-analytics",
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports.",
+          "6: "
+        ]
+      },
+      {
+        "line": 4,
+        "path": "pyproject.toml",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "2: name = \"acme-analytics\"",
+          "3: version = \"1.0.0\"",
+          "4: description = \"Reporting client for the Acme link service.\"",
+          "5: requires-python = \">=3.11\"",
+          "6: dependencies = ["
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/__init__.py",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: \"\"\"Reporting client for the Acme link service.\"\"\"",
+          "2: ",
+          "3: __version__ = \"1.0.0\""
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "link",
+        "window": [
+          "1: \"\"\"HTTP client for the link API.\"\"\"",
+          "2: ",
+          "3: import requests"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-api",
+        "token": "link",
+        "window": [
+          "1: # acme-api",
+          "2: ",
+          "3: The link API for the Acme organisation. It owns the HTTP response shape that",
+          "4: clients such as `acme-web` depend on, and it must follow the organisation",
+          "5: conventions documented in `acme-contracts`."
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-api",
+        "token": "link",
+        "window": [
+          "7: ## Endpoints",
+          "8: ",
+          "9: - `GET /links/:id` \u2014 returns a single link as JSON.",
+          "10: - `GET /resolve/:id` \u2014 resolves a short code to its destination.",
+          "11: - `GET /stats` \u2014 aggregate counts for reporting clients."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-api",
+        "token": "link",
+        "window": [
+          "2:   \"name\": \"acme-api\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Link shortener API. Owns the link response shape and handlers.\",",
+          "5:   \"main\": \"src/server.ts\",",
+          "6:   \"dependencies\": {"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/handlers/resolve.ts",
+        "repo": "acme-api",
+        "token": "link",
+        "window": [
+          "1: import type { Request, Response } from \"express\";",
+          "2: ",
+          "3: // Resolves a short code to its destination. A link we cannot serve is reported",
+          "4: // with the standard error envelope so clients can switch on `error.code`.",
+          "5: export function handleResolve(req: Request, res: Response): void {"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/handlers/resolve.ts",
+        "repo": "acme-api",
+        "token": "link",
+        "window": [
+          "4: // with the standard error envelope so clients can switch on `error.code`.",
+          "5: export function handleResolve(req: Request, res: Response): void {",
+          "6:   const link = lookupTarget(req.params.id);",
+          "7:   if (!link) {",
+          "8:     res.status(404).json({ error: { code: \"not_found\", message: \"link not found\" } });"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "1: # acme-gateway",
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "1: package client",
+          "2: ",
+          "3: // envelope mirrors the error body the link API returns, as documented by the",
+          "4: // organisation's conventions repository.",
+          "5: type envelope struct {"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "internal/client/errors.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "10: }",
+          "11: ",
+          "12: // IsMissing reports whether an error envelope describes a link the API could",
+          "13: // not serve, by matching the documented error code rather than the status line.",
+          "14: func IsMissing(body envelope) bool {"
+        ]
+      },
+      {
+        "line": 10,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "8: )",
+          "9: ",
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")"
+        ]
+      },
+      {
+        "line": 12,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "link",
+        "window": [
+          "10: // ErrLinkNotFound is returned when the link API says a short code has no",
+          "11: // destination. The gateway maps it onto its own 404.",
+          "12: var ErrLinkNotFound = errors.New(\"link is not available\")",
+          "13: ",
+          "14: // codeNotFound is the error code the link API puts in its error envelope. Any"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "url",
+        "window": [
+          "2: ",
+          "3: // Builds the JSON body returned by GET /links/:id.",
+          "4: export function buildLinkResponse(id: string, url: string): LinkResponse {",
+          "5:   return {",
+          "6:     id: normalizeShortCode(id),"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "url",
+        "window": [
+          "5:   return {",
+          "6:     id: normalizeShortCode(id),",
+          "7:     url,",
+          "8:     created_at: new Date().toISOString(),",
+          "9:     expires_at: null,"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/types.ts",
+        "repo": "acme-api",
+        "token": "url",
+        "window": [
+          "3: export interface LinkResponse {",
+          "4:   id: string;",
+          "5:   url: string;",
+          "6:   created_at: string;",
+          "7:   expires_at: string | null;"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-shared",
+        "score": 7.0,
+        "signals": [
+          "candidate",
+          "http",
+          "validateUrl"
+        ]
+      },
+      {
+        "repo": "acme-api",
+        "score": 2.667,
+        "signals": [
+          "link",
+          "url"
+        ]
+      },
+      {
+        "repo": "acme-gateway",
+        "score": 1.667,
+        "signals": [
+          "http",
+          "link"
+        ]
+      },
+      {
+        "repo": "acme-analytics",
+        "score": 0.667,
+        "signals": [
+          "link"
+        ]
+      }
+    ],
+    "searched": [
+      "validateUrl",
+      "startsWith",
+      "candidate",
+      "invalid",
+      "http",
+      "link",
+      "span",
+      "util",
+      "url"
+    ],
+    "signals": [
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "validateUrl",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "startsWith",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "candidate",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "invalid",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "http",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "link",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "span",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "util",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "url",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "duplicate-logic-retry": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 13,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "attempt",
+        "window": [
+          "11:   let delay = INITIAL_DELAY_MS;",
+          "12:   let last: unknown;",
+          "13:   for (let attempt = 1; attempt <= attempts; attempt += 1) {",
+          "14:     try {",
+          "15:       return await operation();"
+        ]
+      },
+      {
+        "line": 18,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "attempt",
+        "window": [
+          "16:     } catch (err) {",
+          "17:       last = err;",
+          "18:       if (attempt < attempts) {",
+          "19:         await new Promise((resolve) => setTimeout(resolve, delay));",
+          "20:         delay *= 2;"
+        ]
+      },
+      {
+        "line": 11,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "delay",
+        "window": [
+          "9:   attempts: number = MAX_ATTEMPTS,",
+          "10: ): Promise<T> {",
+          "11:   let delay = INITIAL_DELAY_MS;",
+          "12:   let last: unknown;",
+          "13:   for (let attempt = 1; attempt <= attempts; attempt += 1) {"
+        ]
+      },
+      {
+        "line": 19,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "delay",
+        "window": [
+          "17:       last = err;",
+          "18:       if (attempt < attempts) {",
+          "19:         await new Promise((resolve) => setTimeout(resolve, delay));",
+          "20:         delay *= 2;",
+          "21:       }"
+        ]
+      },
+      {
+        "line": 20,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "delay",
+        "window": [
+          "18:       if (attempt < attempts) {",
+          "19:         await new Promise((resolve) => setTimeout(resolve, delay));",
+          "20:         delay *= 2;",
+          "21:       }",
+          "22:     }"
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "retryWithBackoff",
+        "window": [
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "retryWithBackoff",
+        "window": [
+          "2: export { formatTimestamp, TIMESTAMP_FORMAT } from \"./format\";",
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";",
+          "4: export { retryWithBackoff } from \"./retry\";",
+          "5: export { MAX_LINKS_PER_PAGE, DEFAULT_LINKS_PER_PAGE } from \"./limits\";"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "retryWithBackoff",
+        "window": [
+          "5: // Services calling each other should import this rather than writing their own",
+          "6: // loop, so timeout behaviour is uniform across the org.",
+          "7: export async function retryWithBackoff<T>(",
+          "8:   operation: () => Promise<T>,",
+          "9:   attempts: number = MAX_ATTEMPTS,"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "operation",
+        "window": [
+          "6: // loop, so timeout behaviour is uniform across the org.",
+          "7: export async function retryWithBackoff<T>(",
+          "8:   operation: () => Promise<T>,",
+          "9:   attempts: number = MAX_ATTEMPTS,",
+          "10: ): Promise<T> {"
+        ]
+      },
+      {
+        "line": 15,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "operation",
+        "window": [
+          "13:   for (let attempt = 1; attempt <= attempts; attempt += 1) {",
+          "14:     try {",
+          "15:       return await operation();",
+          "16:     } catch (err) {",
+          "17:       last = err;"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "attempts",
+        "window": [
+          "2: const INITIAL_DELAY_MS = 100;",
+          "3: ",
+          "4: // The organisation's retry policy: bounded attempts with exponential backoff.",
+          "5: // Services calling each other should import this rather than writing their own",
+          "6: // loop, so timeout behaviour is uniform across the org."
+        ]
+      },
+      {
+        "line": 9,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "attempts",
+        "window": [
+          "7: export async function retryWithBackoff<T>(",
+          "8:   operation: () => Promise<T>,",
+          "9:   attempts: number = MAX_ATTEMPTS,",
+          "10: ): Promise<T> {",
+          "11:   let delay = INITIAL_DELAY_MS;"
+        ]
+      },
+      {
+        "line": 13,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "attempts",
+        "window": [
+          "11:   let delay = INITIAL_DELAY_MS;",
+          "12:   let last: unknown;",
+          "13:   for (let attempt = 1; attempt <= attempts; attempt += 1) {",
+          "14:     try {",
+          "15:       return await operation();"
+        ]
+      },
+      {
+        "line": 18,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "attempts",
+        "window": [
+          "16:     } catch (err) {",
+          "17:       last = err;",
+          "18:       if (attempt < attempts) {",
+          "19:         await new Promise((resolve) => setTimeout(resolve, delay));",
+          "20:         delay *= 2;"
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "retry",
+        "window": [
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/index.ts",
+        "repo": "acme-shared",
+        "token": "retry",
+        "window": [
+          "2: export { formatTimestamp, TIMESTAMP_FORMAT } from \"./format\";",
+          "3: export { ERROR_CODES, errorEnvelope } from \"./errors\";",
+          "4: export { retryWithBackoff } from \"./retry\";",
+          "5: export { MAX_LINKS_PER_PAGE, DEFAULT_LINKS_PER_PAGE } from \"./limits\";"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "retry",
+        "window": [
+          "2: const INITIAL_DELAY_MS = 100;",
+          "3: ",
+          "4: // The organisation's retry policy: bounded attempts with exponential backoff.",
+          "5: // Services calling each other should import this rather than writing their own",
+          "6: // loop, so timeout behaviour is uniform across the org."
+        ]
+      },
+      {
+        "line": 12,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "last",
+        "window": [
+          "10: ): Promise<T> {",
+          "11:   let delay = INITIAL_DELAY_MS;",
+          "12:   let last: unknown;",
+          "13:   for (let attempt = 1; attempt <= attempts; attempt += 1) {",
+          "14:     try {"
+        ]
+      },
+      {
+        "line": 17,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "last",
+        "window": [
+          "15:       return await operation();",
+          "16:     } catch (err) {",
+          "17:       last = err;",
+          "18:       if (attempt < attempts) {",
+          "19:         await new Promise((resolve) => setTimeout(resolve, delay));"
+        ]
+      },
+      {
+        "line": 24,
+        "path": "src/retry.ts",
+        "repo": "acme-shared",
+        "token": "last",
+        "window": [
+          "22:     }",
+          "23:   }",
+          "24:   throw last;",
+          "25: }"
+        ]
+      },
+      {
+        "line": 19,
+        "path": "docs/timestamps.md",
+        "repo": "acme-contracts",
+        "token": "time",
+        "window": [
+          "17: | TypeScript | `new Date().toISOString()` | `toLocaleString`, `toLocaleDateString` |",
+          "18: | Python | `datetime.now(timezone.utc).isoformat()` | `strftime(\"%c\")`, naive `datetime.now()` |",
+          "19: | Go | `time.Now().UTC().Format(time.RFC3339)` | `time.RFC1123`, `time.Kitchen`, `time.ANSIC` |",
+          "20: ",
+          "21: The shared library exposes the format as `TIMESTAMP_FORMAT` so services that"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/format.ts",
+        "repo": "acme-web",
+        "token": "time",
+        "window": [
+          "1: import { formatTimestamp } from \"acme-shared\";",
+          "2: ",
+          "3: // Renders a link's creation time for display. The API sends it as an",
+          "4: // already-serialised ISO string, which is what we hand to the shared formatter.",
+          "5: export function displayCreatedAt(createdAt: string): string {"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-shared",
+        "score": 20.0,
+        "signals": [
+          "attempt",
+          "attempts",
+          "delay",
+          "last",
+          "operation",
+          "retry",
+          "retryWithBackoff"
+        ]
+      },
+      {
+        "repo": "acme-contracts",
+        "score": 1.0,
+        "signals": [
+          "time"
+        ]
+      },
+      {
+        "repo": "acme-web",
+        "score": 1.0,
+        "signals": [
+          "time"
+        ]
+      }
+    ],
+    "searched": [
+      "attempt",
+      "delay",
+      "retryWithBackoff",
+      "Millisecond",
+      "maxAttempts",
+      "operation",
+      "attempts",
+      "Sleep",
+      "retry",
+      "func",
+      "last",
+      "time"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "attempt",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "delay",
+        "weight": 5
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "retryWithBackoff",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Millisecond",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "maxAttempts",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "operation",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "attempts",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Sleep",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "retry",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "func",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "last",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "time",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "negative-dependency-bump": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [],
+    "ranked_repos": [],
+    "searched": [
+      "express"
+    ],
+    "signals": [
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "express",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "negative-docs-cleanup": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 6,
+        "path": "pyproject.toml",
+        "repo": "acme-analytics",
+        "token": "dependencies",
+        "window": [
+          "4: description = \"Reporting client for the Acme link service.\"",
+          "5: requires-python = \">=3.11\"",
+          "6: dependencies = [",
+          "7:     \"requests>=2.31\",",
+          "8: ]"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "package.json",
+        "repo": "acme-web",
+        "token": "dependencies",
+        "window": [
+          "4:   \"description\": \"Web client that consumes the acme-api link response.\",",
+          "5:   \"main\": \"src/render.ts\",",
+          "6:   \"dependencies\": {",
+          "7:     \"acme-shared\": \"^1.0.0\"",
+          "8:   }"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "CONVENTIONS.md",
+        "repo": "acme-contracts",
+        "token": "See",
+        "window": [
+          "4: endpoint, including new ones.",
+          "5: ",
+          "6: 1. **Errors** use the standard envelope. See `docs/error-envelope.md`.",
+          "7: 2. **Timestamps** in responses are UTC ISO-8601. See `docs/timestamps.md`.",
+          "8: 3. **Versioning** is by major version in the path (`/v1/...`) for every public"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "CONVENTIONS.md",
+        "repo": "acme-contracts",
+        "token": "See",
+        "window": [
+          "5: ",
+          "6: 1. **Errors** use the standard envelope. See `docs/error-envelope.md`.",
+          "7: 2. **Timestamps** in responses are UTC ISO-8601. See `docs/timestamps.md`.",
+          "8: 3. **Versioning** is by major version in the path (`/v1/...`) for every public",
+          "9:    endpoint. See `docs/versioning.md`."
+        ]
+      },
+      {
+        "line": 9,
+        "path": "CONVENTIONS.md",
+        "repo": "acme-contracts",
+        "token": "See",
+        "window": [
+          "7: 2. **Timestamps** in responses are UTC ISO-8601. See `docs/timestamps.md`.",
+          "8: 3. **Versioning** is by major version in the path (`/v1/...`) for every public",
+          "9:    endpoint. See `docs/versioning.md`."
+        ]
+      },
+      {
+        "line": 5,
+        "path": "package.json",
+        "repo": "acme-shared",
+        "token": "src",
+        "window": [
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Shared helpers for the Acme organisation: URL validation, formatting, error constants.\",",
+          "5:   \"main\": \"src/index.ts\"",
+          "6: }"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "package.json",
+        "repo": "acme-web",
+        "token": "src",
+        "window": [
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Web client that consumes the acme-api link response.\",",
+          "5:   \"main\": \"src/render.ts\",",
+          "6:   \"dependencies\": {",
+          "7:     \"acme-shared\": \"^1.0.0\""
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "the",
+        "window": [
+          "1: # acme-analytics",
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports."
+        ]
+      },
+      {
+        "line": 7,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "the",
+        "window": [
+          "5: renders plain-text reports.",
+          "6: ",
+          "7: It is a Python package, so it appears in no JavaScript manifest anywhere in the",
+          "8: organisation. The only thing tying it to the API is the HTTP contract, which is",
+          "9: exactly why a change to that contract is easy to miss from the API side."
+        ]
+      },
+      {
+        "line": 8,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "the",
+        "window": [
+          "6: ",
+          "7: It is a Python package, so it appears in no JavaScript manifest anywhere in the",
+          "8: organisation. The only thing tying it to the API is the HTTP contract, which is",
+          "9: exactly why a change to that contract is easy to miss from the API side."
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "the",
+        "window": [
+          "7: It is a Python package, so it appears in no JavaScript manifest anywhere in the",
+          "8: organisation. The only thing tying it to the API is the HTTP contract, which is",
+          "9: exactly why a change to that contract is easy to miss from the API side."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "pyproject.toml",
+        "repo": "acme-analytics",
+        "token": "the",
+        "window": [
+          "2: name = \"acme-analytics\"",
+          "3: version = \"1.0.0\"",
+          "4: description = \"Reporting client for the Acme link service.\"",
+          "5: requires-python = \">=3.11\"",
+          "6: dependencies = ["
+        ]
+      },
+      {
+        "line": 6,
+        "path": "CONVENTIONS.md",
+        "repo": "acme-contracts",
+        "token": "the",
+        "window": [
+          "4: endpoint, including new ones.",
+          "5: ",
+          "6: 1. **Errors** use the standard envelope. See `docs/error-envelope.md`.",
+          "7: 2. **Timestamps** in responses are UTC ISO-8601. See `docs/timestamps.md`.",
+          "8: 3. **Versioning** is by major version in the path (`/v1/...`) for every public"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "CONVENTIONS.md",
+        "repo": "acme-contracts",
+        "token": "the",
+        "window": [
+          "6: 1. **Errors** use the standard envelope. See `docs/error-envelope.md`.",
+          "7: 2. **Timestamps** in responses are UTC ISO-8601. See `docs/timestamps.md`.",
+          "8: 3. **Versioning** is by major version in the path (`/v1/...`) for every public",
+          "9:    endpoint. See `docs/versioning.md`."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-contracts",
+        "token": "the",
+        "window": [
+          "1: # acme-contracts",
+          "2: ",
+          "3: Organisation-wide API conventions, published as the `@acme/contracts` package.",
+          "4: Services such as `acme-api` depend on it; clients rely on these documents",
+          "5: holding."
+        ]
+      },
+      {
+        "line": 7,
+        "path": "README.md",
+        "repo": "acme-contracts",
+        "token": "the",
+        "window": [
+          "5: holding.",
+          "6: ",
+          "7: - `CONVENTIONS.md` \u2014 index of the conventions.",
+          "8: - `docs/error-envelope.md` \u2014 the required error response shape.",
+          "9: - `docs/timestamps.md` \u2014 the required timestamp format, per language."
+        ]
+      },
+      {
+        "line": 8,
+        "path": "README.md",
+        "repo": "acme-contracts",
+        "token": "the",
+        "window": [
+          "6: ",
+          "7: - `CONVENTIONS.md` \u2014 index of the conventions.",
+          "8: - `docs/error-envelope.md` \u2014 the required error response shape.",
+          "9: - `docs/timestamps.md` \u2014 the required timestamp format, per language.",
+          "10: - `docs/versioning.md` \u2014 how public endpoints are versioned."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "the",
+        "window": [
+          "1: # acme-gateway",
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "the",
+        "window": [
+          "2: ",
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly.",
+          "6: "
+        ]
+      },
+      {
+        "line": 5,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "the",
+        "window": [
+          "3: Edge gateway for the Acme link service. It proxies public traffic to the link",
+          "4: API, maps the API's error envelope onto its own status codes, and never exposes",
+          "5: the API's internal shape directly.",
+          "6: ",
+          "7: Written in Go. Like `acme-analytics`, it reaches the API over HTTP only, so no"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "the",
+        "window": [
+          "5: the API's internal shape directly.",
+          "6: ",
+          "7: Written in Go. Like `acme-analytics`, it reaches the API over HTTP only, so no",
+          "8: JavaScript manifest in the organisation records that this dependency exists."
+        ]
+      },
+      {
+        "line": 8,
+        "path": "README.md",
+        "repo": "acme-gateway",
+        "token": "the",
+        "window": [
+          "6: ",
+          "7: Written in Go. Like `acme-analytics`, it reaches the API over HTTP only, so no",
+          "8: JavaScript manifest in the organisation records that this dependency exists."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "the",
+        "window": [
+          "1: # acme-shared",
+          "2: ",
+          "3: Helpers shared across Acme services. Prefer these over reimplementing the same",
+          "4: logic in a consumer:",
+          "5: "
+        ]
+      },
+      {
+        "line": 8,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "the",
+        "window": [
+          "6: - `validateUrl` \u2014 canonical URL validation.",
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-shared",
+        "token": "the",
+        "window": [
+          "7: - `formatTimestamp` / `TIMESTAMP_FORMAT` \u2014 UTC ISO-8601 formatting.",
+          "8: - `ERROR_CODES` / `errorEnvelope` \u2014 the standard error envelope helpers.",
+          "9: - `retryWithBackoff` \u2014 the organisation's retry policy for upstream calls.",
+          "10: - `MAX_LINKS_PER_PAGE` / `DEFAULT_LINKS_PER_PAGE` \u2014 pagination limits."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-shared",
+        "token": "the",
+        "window": [
+          "2:   \"name\": \"acme-shared\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Shared helpers for the Acme organisation: URL validation, formatting, error constants.\",",
+          "5:   \"main\": \"src/index.ts\"",
+          "6: }"
+        ]
+      },
+      {
+        "line": 6,
+        "path": "src/errors.ts",
+        "repo": "acme-shared",
+        "token": "the",
+        "window": [
+          "4: } as const;",
+          "5: ",
+          "6: // Wraps an error code and message in the standard envelope defined by",
+          "7: // acme-contracts. All API errors should be returned through this helper.",
+          "8: export function errorEnvelope(code: string, message: string) {"
+        ]
+      },
+      {
+        "line": 3,
+        "path": "README.md",
+        "repo": "acme-web",
+        "token": "the",
+        "window": [
+          "1: # acme-web",
+          "2: ",
+          "3: Browser client for the Acme link service. It fetches links from `acme-api` and",
+          "4: renders them. Shared helpers (URL validation, formatting) come from",
+          "5: `acme-shared` rather than being reimplemented here."
+        ]
+      },
+      {
+        "line": 4,
+        "path": "package.json",
+        "repo": "acme-web",
+        "token": "the",
+        "window": [
+          "2:   \"name\": \"acme-web\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Web client that consumes the acme-api link response.\",",
+          "5:   \"main\": \"src/render.ts\",",
+          "6:   \"dependencies\": {"
+        ]
+      },
+      {
+        "line": 1,
+        "path": "src/api/links.ts",
+        "repo": "acme-web",
+        "token": "the",
+        "window": [
+          "1: // Client-side view of the acme-api link response. These fields mirror the",
+          "2: // shape owned by acme-api; they must stay in sync with that repo's contract.",
+          "3: export interface LinkView {"
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/format.ts",
+        "repo": "acme-web",
+        "token": "the",
+        "window": [
+          "2: ",
+          "3: // Renders a link's creation time for display. The API sends it as an",
+          "4: // already-serialised ISO string, which is what we hand to the shared formatter.",
+          "5: export function displayCreatedAt(createdAt: string): string {",
+          "6:   return formatTimestamp(createdAt);"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-contracts",
+        "score": 2.4,
+        "signals": [
+          "See",
+          "the"
+        ]
+      },
+      {
+        "repo": "acme-web",
+        "score": 2.4,
+        "signals": [
+          "dependencies",
+          "src",
+          "the"
+        ]
+      },
+      {
+        "repo": "acme-analytics",
+        "score": 1.4,
+        "signals": [
+          "dependencies",
+          "the"
+        ]
+      },
+      {
+        "repo": "acme-shared",
+        "score": 1.4,
+        "signals": [
+          "src",
+          "the"
+        ]
+      },
+      {
+        "repo": "acme-gateway",
+        "score": 0.4,
+        "signals": [
+          "the"
+        ]
+      }
+    ],
+    "searched": [
+      "dependencies",
+      "install",
+      "server",
+      "wiring",
+      "route",
+      "start",
+      "Run",
+      "See",
+      "dev",
+      "npm",
+      "run",
+      "src",
+      "the"
+    ],
+    "signals": [
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "dependencies",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "install",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "server",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "wiring",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "route",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "start",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Run",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "See",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "dev",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "npm",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "run",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "src",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "the",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "negative-formatting-only": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [],
+    "ranked_repos": [],
+    "searched": [
+      "position",
+      "padded",
+      "widths",
+      "ljust",
+      "width",
+      "cell",
+      "join",
+      "rows",
+      "max",
+      "row",
+      "zip"
+    ],
+    "signals": [
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "position",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "padded",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "widths",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "ljust",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "width",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "cell",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "join",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "rows",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "max",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "row",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "zip",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "negative-private-symbol-rename": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [],
+    "ranked_repos": [],
+    "searched": [
+      "canonicalizeShortCode",
+      "normalizeShortCode"
+    ],
+    "signals": [
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "canonicalizeShortCode",
+        "weight": 4
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "removed"
+        ],
+        "token": "normalizeShortCode",
+        "weight": 4
+      }
+    ],
+    "truncated": false
+  },
+  "negative-test-only": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [],
+    "ranked_repos": [],
+    "searched": [
+      "actual",
+      "cases",
+      "/abc123/details",
+      "/AbC123",
+      "TestParseShortCode",
+      "parseShortCode",
+      "shortcode",
+      "expected",
+      "details",
+      "testing",
+      "AbC123",
+      "Errorf",
+      "abc123",
+      "input",
+      "func"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "actual",
+        "weight": 5
+      },
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "cases",
+        "weight": 5
+      },
+      {
+        "kind": "route",
+        "polarity": [
+          "added"
+        ],
+        "token": "/abc123/details",
+        "weight": 4
+      },
+      {
+        "kind": "route",
+        "polarity": [
+          "added"
+        ],
+        "token": "/AbC123",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "TestParseShortCode",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "parseShortCode",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "shortcode",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "expected",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "details",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "testing",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "AbC123",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Errorf",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "abc123",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "input",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "func",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  },
+  "single-repo-unguarded-cache": {
+    "convention_docs": {
+      "acme-contracts": [
+        "CONVENTIONS.md",
+        "docs/error-envelope.md",
+        "docs/timestamps.md",
+        "docs/versioning.md"
+      ]
+    },
+    "hits": [
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-analytics",
+        "token": "links",
+        "window": [
+          "2: ",
+          "3: Reporting client for the Acme link service. It reads the link API over HTTP \u2014",
+          "4: `GET /links/{id}` for a single link and `GET /stats` for aggregate counts \u2014 and",
+          "5: renders plain-text reports.",
+          "6: "
+        ]
+      },
+      {
+        "line": 10,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "links",
+        "window": [
+          "8: ",
+          "9: def fetch_link(link_id):",
+          "10:     \"\"\"Return one link record from GET /links/{id}.\"\"\"",
+          "11:     response = requests.get(f\"{API_BASE}/links/{link_id}\", timeout=HTTP_TIMEOUT)",
+          "12:     response.raise_for_status()"
+        ]
+      },
+      {
+        "line": 11,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "links",
+        "window": [
+          "9: def fetch_link(link_id):",
+          "10:     \"\"\"Return one link record from GET /links/{id}.\"\"\"",
+          "11:     response = requests.get(f\"{API_BASE}/links/{link_id}\", timeout=HTTP_TIMEOUT)",
+          "12:     response.raise_for_status()",
+          "13:     payload = response.json()"
+        ]
+      },
+      {
+        "line": 9,
+        "path": "README.md",
+        "repo": "acme-api",
+        "token": "links",
+        "window": [
+          "7: ## Endpoints",
+          "8: ",
+          "9: - `GET /links/:id` \u2014 returns a single link as JSON.",
+          "10: - `GET /resolve/:id` \u2014 resolves a short code to its destination.",
+          "11: - `GET /stats` \u2014 aggregate counts for reporting clients."
+        ]
+      },
+      {
+        "line": 3,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "links",
+        "window": [
+          "1: import { LinkStatus, type LinkResponse } from \"../types\";",
+          "2: ",
+          "3: // Builds the JSON body returned by GET /links/:id.",
+          "4: export function buildLinkResponse(id: string, url: string): LinkResponse {",
+          "5:   return {"
+        ]
+      },
+      {
+        "line": 2,
+        "path": "src/server.ts",
+        "repo": "acme-api",
+        "token": "links",
+        "window": [
+          "1: import express from \"express\";",
+          "2: import { buildLinkResponse } from \"./handlers/links\";",
+          "3: import { handleResolve } from \"./handlers/resolve\";",
+          "4: import { handleStats } from \"./handlers/stats\";"
+        ]
+      },
+      {
+        "line": 8,
+        "path": "src/server.ts",
+        "repo": "acme-api",
+        "token": "links",
+        "window": [
+          "6: const app = express();",
+          "7: ",
+          "8: app.get(\"/links/:id\", (req, res) => {",
+          "9:   const response = buildLinkResponse(req.params.id, \"https://example.com\");",
+          "10:   res.json(response);"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "docs/versioning.md",
+        "repo": "acme-contracts",
+        "token": "links",
+        "window": [
+          "5: ",
+          "6: ```",
+          "7: GET /v1/links/:id",
+          "8: GET /v1/stats",
+          "9: ```"
+        ]
+      },
+      {
+        "line": 27,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "links",
+        "window": [
+          "25: // Fetch retrieves a single link from the link API.",
+          "26: func Fetch(base string, shortCode string) (*Link, error) {",
+          "27: \tresp, err := http.Get(base + \"/links/\" + shortCode)",
+          "28: \tif err != nil {",
+          "29: \t\treturn nil, err"
+        ]
+      },
+      {
+        "line": 18,
+        "path": "internal/client/links.go",
+        "repo": "acme-gateway",
+        "token": "view",
+        "window": [
+          "16: const codeNotFound = \"not_found\"",
+          "17: ",
+          "18: // Link is the gateway's view of the link API response. Only the fields the",
+          "19: // gateway actually forwards are decoded.",
+          "20: type Link struct {"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/acme_analytics/client.py",
+        "repo": "acme-analytics",
+        "token": "api",
+        "window": [
+          "3: import requests",
+          "4: ",
+          "5: API_BASE = \"https://api.acme.example\"",
+          "6: HTTP_TIMEOUT = 10",
+          "7: "
+        ]
+      },
+      {
+        "line": 1,
+        "path": "README.md",
+        "repo": "acme-api",
+        "token": "api",
+        "window": [
+          "1: # acme-api",
+          "2: ",
+          "3: The link API for the Acme organisation. It owns the HTTP response shape that"
+        ]
+      },
+      {
+        "line": 2,
+        "path": "package.json",
+        "repo": "acme-api",
+        "token": "api",
+        "window": [
+          "1: {",
+          "2:   \"name\": \"acme-api\",",
+          "3:   \"version\": \"1.0.0\",",
+          "4:   \"description\": \"Link shortener API. Owns the link response shape and handlers.\","
+        ]
+      },
+      {
+        "line": 4,
+        "path": "README.md",
+        "repo": "acme-contracts",
+        "token": "api",
+        "window": [
+          "2: ",
+          "3: Organisation-wide API conventions, published as the `@acme/contracts` package.",
+          "4: Services such as `acme-api` depend on it; clients rely on these documents",
+          "5: holding.",
+          "6: "
+        ]
+      },
+      {
+        "line": 4,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "url",
+        "window": [
+          "2: ",
+          "3: // Builds the JSON body returned by GET /links/:id.",
+          "4: export function buildLinkResponse(id: string, url: string): LinkResponse {",
+          "5:   return {",
+          "6:     id: normalizeShortCode(id),"
+        ]
+      },
+      {
+        "line": 7,
+        "path": "src/handlers/links.ts",
+        "repo": "acme-api",
+        "token": "url",
+        "window": [
+          "5:   return {",
+          "6:     id: normalizeShortCode(id),",
+          "7:     url,",
+          "8:     created_at: new Date().toISOString(),",
+          "9:     expires_at: null,"
+        ]
+      },
+      {
+        "line": 5,
+        "path": "src/types.ts",
+        "repo": "acme-api",
+        "token": "url",
+        "window": [
+          "3: export interface LinkResponse {",
+          "4:   id: string;",
+          "5:   url: string;",
+          "6:   created_at: string;",
+          "7:   expires_at: string | null;"
+        ]
+      }
+    ],
+    "ranked_repos": [
+      {
+        "repo": "acme-api",
+        "score": 3.167,
+        "signals": [
+          "api",
+          "links",
+          "url"
+        ]
+      },
+      {
+        "repo": "acme-gateway",
+        "score": 2.5,
+        "signals": [
+          "links",
+          "view"
+        ]
+      },
+      {
+        "repo": "acme-analytics",
+        "score": 1.167,
+        "signals": [
+          "api",
+          "links"
+        ]
+      },
+      {
+        "repo": "acme-contracts",
+        "score": 1.167,
+        "signals": [
+          "api",
+          "links"
+        ]
+      }
+    ],
+    "searched": [
+      "linkCache",
+      "rememberLink",
+      "cachedLink",
+      "fetchLink",
+      "LinkView",
+      "Record",
+      "cached",
+      "cache",
+      "links",
+      "href",
+      "view",
+      "api",
+      "url"
+    ],
+    "signals": [
+      {
+        "kind": "field",
+        "polarity": [
+          "added"
+        ],
+        "token": "linkCache",
+        "weight": 5
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "rememberLink",
+        "weight": 4
+      },
+      {
+        "kind": "function",
+        "polarity": [
+          "added"
+        ],
+        "token": "cachedLink",
+        "weight": 4
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "fetchLink",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "LinkView",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "Record",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "cached",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "cache",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "links",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "href",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "view",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added"
+        ],
+        "token": "api",
+        "weight": 2
+      },
+      {
+        "kind": "identifier",
+        "polarity": [
+          "added",
+          "removed"
+        ],
+        "token": "url",
+        "weight": 2
+      }
+    ],
+    "truncated": false
+  }
+}
