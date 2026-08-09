@@ -1,0 +1,26 @@
+id = "single-repo-unguarded-cache"
+repo = "acme-web"
+base = "main"
+head = "unsafe-cache-access"
+
+expect_finding = true
+category = "single_repo"
+
+description = """
+An in-memory cache is added and read without a presence check, so the first
+lookup for any link dereferences a missing entry. A real defect, entirely inside
+one repository, with no cross-repository claim to make.
+"""
+
+notes = """
+Deliberately carries no target repository, which makes it **not
+retrieval-scorable**: a finding with no cross-repository claim says nothing
+about which sibling retrieval should have surfaced, and inventing a target here
+would be scoring the wrong thing.
+
+It earns its place in the corpus at the live tier. A reviewer trained on
+cross-repository impact has two failure modes on a case like this — miss it
+entirely because no sibling is involved, or manufacture a sibling to justify
+reporting it. Both are worth catching, and neither shows up anywhere else in the
+corpus.
+"""

@@ -1,0 +1,4 @@
+{
+  "title": "Drop the aggregate stats endpoint",
+  "body": "GET /stats returns organisation-wide totals that nothing in the API itself needs, and the numbers are always zero in practice. Removing the handler and its route."
+}

@@ -1,0 +1,4 @@
+{
+  "title": "Cover the short-code parser with a table test",
+  "body": "The parser had no tests. Adds a table-driven test for trimming, the trailing-segment case, and the empty path. No production code changes."
+}

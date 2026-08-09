@@ -1,0 +1,27 @@
+id = "convention-local-timestamps"
+repo = "acme-gateway"
+base = "main"
+head = "local-time-cache-endpoint"
+
+expect_finding = true
+category = "convention"
+target_repos = ["acme-contracts"]
+
+description = """
+A new operator-facing endpoint stamps its response with a locale- and
+timezone-dependent timestamp layout. The organisation's conventions require UTC
+ISO-8601 in every response, and name this exact layout as the thing not to use.
+"""
+
+notes = """
+No target_files, for the same reason the inherited convention case has none: the
+conventions documents reach the model through retrieval's separate
+convention-doc channel rather than through the search-hit channel that file
+recall is computed over. File-level ground truth here would score the wrong
+channel.
+
+This case is findable lexically only because the conventions document names the
+anti-pattern *in each language the organisation uses*. That is realistic for a
+polyglot org, but it does make the case easier than the versioning one, and the
+corpus spec says so rather than letting the number imply otherwise.
+"""

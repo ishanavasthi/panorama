@@ -7,6 +7,8 @@ conventions documented in `acme-contracts`.
 ## Endpoints
 
 - `GET /links/:id` — returns a single link as JSON.
+- `GET /resolve/:id` — resolves a short code to its destination.
+- `GET /stats` — aggregate counts for reporting clients.
 
 ## Development
 

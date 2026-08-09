@@ -28,6 +28,13 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# The fixture data tree is not this project's source — it is a mock organisation
+# written to look like somebody else's code, in three languages, and its exact
+# contents are ground truth for the evaluation corpus. Linting it is wrong twice
+# over: the style of a *fixture* is part of what is being measured (one case is
+# a formatting-only control), and a lint autofix there would silently change a
+# labelled case without touching a single label.
+extend-exclude = ["src/panorama/fixtures/data"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

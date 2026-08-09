@@ -1,0 +1,4 @@
+{
+  "title": "Reformat report rendering to the line-length limit",
+  "body": "Whitespace only: wraps two long expressions so the module fits the formatter's line length. No behaviour change."
+}

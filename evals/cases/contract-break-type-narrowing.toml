@@ -1,0 +1,27 @@
+id = "contract-break-type-narrowing"
+repo = "acme-shared"
+base = "main"
+head = "narrow-format-input"
+
+expect_finding = true
+category = "contract_break"
+target_repos = ["acme-web"]
+target_files = ["acme-web/src/format.ts"]
+
+description = """
+A shared helper narrows a parameter from a union to a single type. The change is
+locally reasonable and locally type-safe, but a consumer calls it with the
+member that was removed, so the narrowing breaks that consumer's build.
+"""
+
+notes = """
+The only case where the pull request is in the library rather than in a service,
+which matters: the direction of the dependency edge is reversed compared to
+every other contract case. A dependency-graph channel that only looks at what
+the PR repo depends on, rather than at what depends on the PR repo, will be
+silent here.
+
+Lexically it is easy — one distinctive function name, one consumer — so it is
+not measuring ranking so much as guarding against a whole class of edge going
+missing.
+"""

@@ -1,0 +1,30 @@
+id = "convention-unversioned-endpoint"
+repo = "acme-api"
+base = "main"
+head = "unversioned-exports-endpoint"
+
+expect_finding = true
+category = "convention"
+target_repos = ["acme-contracts"]
+
+description = """
+A new public endpoint is mounted at an unprefixed path. The organisation's
+versioning convention requires every public endpoint to sit under a major
+version prefix, because an unversioned public path cannot be retired later.
+"""
+
+notes = """
+The hardest case in the corpus, and the one V2.4 exists to fix. The diff and the
+convention it violates share **no vocabulary at all** — the violation is the
+absence of a path segment, and absence has no lexical footprint. At the V2.2
+baseline this case surfaces nothing and scores zero, by construction.
+
+The only thing that can find it is the structural fact that the API repository
+declares the conventions package as a dependency. That edge is real in the
+fixture data and its declared package name deliberately differs from its
+directory name, so an implementation that matches dependency strings against
+directory names will not find it either.
+
+If this case ever starts passing for a *lexical* reason, the case has decayed
+and must be rewritten. It is a load-bearing zero.
+"""

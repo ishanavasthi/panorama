@@ -1,0 +1,26 @@
+id = "negative-dependency-bump"
+repo = "acme-api"
+base = "main"
+head = "bump-express"
+
+expect_finding = false
+expect_no_hits = true
+
+description = """
+A routine version bump of an external dependency. One line of manifest changes,
+no source changes, no behaviour change. A correct review reports nothing.
+"""
+
+notes = """
+The bump is deliberately of an *external* package rather than a sibling one.
+A sibling bump would surface that sibling — correctly, since retrieval is right
+to notice the edge — and the resulting label would be asserting something about
+the review rather than about retrieval, which is the mistake the docs-cleanup
+control already demonstrates.
+
+Bumping an external package keeps the expectation clean and still exercises the
+thing worth exercising: a manifest-only diff must not be mistaken for a change
+to the contract the manifest describes. That failure mode gets *more* likely in
+V2.4, where manifests stop being ordinary files and start being the input to a
+dependency graph.
+"""

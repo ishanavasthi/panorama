@@ -1,0 +1,27 @@
+id = "contract-break-removed-enum-member"
+repo = "acme-api"
+base = "main"
+head = "drop-archived-status"
+
+expect_finding = true
+category = "contract_break"
+target_repos = ["acme-analytics"]
+target_files = ["acme-analytics/src/acme_analytics/status.py"]
+
+description = """
+A member is removed from a status enum because nothing in the API sets it. A
+reporting client mirrors the enum as a set of constants and branches on the
+removed value, so its handling of that state becomes unreachable rather than
+loudly broken.
+"""
+
+notes = """
+A very small diff — two lines — which is the point. Retrieval that depends on
+volume of signal has nothing to work with, and the one token that matters is the
+enum's *value* string rather than its identifier, because that is the form the
+consumer stores it in.
+
+This case also guards against a tempting shortcut: matching only on the changed
+identifier would miss it, since the Python constant is spelled in upper snake
+case and shares no identifier with the TypeScript member.
+"""

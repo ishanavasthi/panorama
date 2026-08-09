@@ -1,0 +1,31 @@
+id = "duplicate-logic-date-formatting"
+repo = "acme-analytics"
+base = "main"
+head = "local-timestamp-format"
+
+expect_finding = true
+category = "duplicate_logic"
+target_repos = ["acme-shared"]
+target_files = ["acme-shared/src/format.ts"]
+
+description = """
+A Python client adds its own UTC timestamp formatting. The shared library
+already owns timestamp formatting for the organisation, so this is a second
+implementation of the same rule that will drift from the first.
+"""
+
+notes = """
+The naming-hostile case, and the corpus's honest statement of a real limit:
+`format_timestamp` and `formatTimestamp` are not the same string, and no ranking
+strategy makes them one. The only bridge is a constant that both languages spell
+identically.
+
+Expect this case to be won on a weak signal or lost outright. If the symbol
+index (V2.5) cannot beat it either, that is a finding to record rather than a
+corpus bug — it would mean cross-language duplicate detection needs normalised
+identifiers, which is a different and much larger piece of work.
+
+There is a second trap here worth watching: the conventions repository is *also*
+about timestamps and shares a great deal of this diff's vocabulary, so a
+plausible-looking wrong answer is readily available.
+"""

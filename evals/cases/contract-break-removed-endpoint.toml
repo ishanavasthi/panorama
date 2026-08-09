@@ -1,0 +1,27 @@
+id = "contract-break-removed-endpoint"
+repo = "acme-api"
+base = "main"
+head = "remove-stats-endpoint"
+
+expect_finding = true
+category = "contract_break"
+target_repos = ["acme-analytics"]
+target_files = ["acme-analytics/src/acme_analytics/client.py"]
+
+description = """
+The API deletes an endpoint on the grounds that nothing inside the API needs it.
+A Python reporting client calls that endpoint over HTTP, and nothing in any
+manifest records that the caller exists.
+"""
+
+notes = """
+The first of the cross-language cases, and the clearest statement of why the
+organisation needs a cross-repository reviewer at all: the only trace of this
+dependency anywhere is a URL string in one repository matching a route
+declaration in another.
+
+Findable lexically because the route literal and the response field names are
+distinctive and appear verbatim on both sides. The dependency-graph channel will
+be silent — a Go or Python consumer cannot appear in a JavaScript manifest —
+which is exactly the condition fusion has to survive.
+"""

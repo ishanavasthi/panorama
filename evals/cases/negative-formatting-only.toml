@@ -1,0 +1,28 @@
+id = "negative-formatting-only"
+repo = "acme-analytics"
+base = "main"
+head = "reformat-report"
+
+expect_finding = false
+expect_no_hits = true
+
+description = """
+Two long expressions are wrapped to fit a line-length limit. Every token in the
+diff already existed on the line above or below it; nothing is added, removed or
+renamed. A correct review reports nothing.
+"""
+
+notes = """
+The hardest negative to get right at the fixture level, and the reason is
+instructive. A formatting change re-emits every identifier on every touched line
+as both a removed and an added signal, so a formatting-only diff in ordinary
+application code produces a *larger* signal set than most real changes — and
+every one of those signals is noise.
+
+The module chosen is pure local presentation with no shared vocabulary, so the
+expectation of zero hits is honest rather than lucky. Getting there took two
+renames of local variables that collided with unrelated words elsewhere in the
+organisation, which is itself the finding: incidental token collision is the
+dominant noise source at this corpus size, and it is what the fusion step will
+have to be robust to.
+"""

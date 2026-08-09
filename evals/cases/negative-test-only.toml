@@ -1,0 +1,25 @@
+id = "negative-test-only"
+repo = "acme-gateway"
+base = "main"
+head = "add-shortcode-tests"
+
+expect_finding = false
+expect_no_hits = true
+
+description = """
+A table-driven unit test is added for a package-private helper. No production
+code changes. A correct review reports nothing about any other repository.
+"""
+
+notes = """
+The test deliberately covers a helper with no cross-repository surface, so the
+expectation stays clean. A test for the *client* would necessarily restate the
+API contract and would legitimately surface the API repository — which is a
+useful case in its own right, but a different one, and it would not be scorable
+as a negative.
+
+The realistic failure this guards against is a reviewer that treats added lines
+as risk regardless of what the lines are. Test files are the largest source of
+new code in a healthy repository, and a reviewer that comments on all of them is
+worse than no reviewer.
+"""

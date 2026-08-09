@@ -1,0 +1,36 @@
+id = "contract-break-status-code"
+repo = "acme-api"
+base = "main"
+head = "expired-status-code"
+
+expect_finding = true
+category = "contract_break"
+target_repos = ["acme-gateway"]
+target_files = ["acme-gateway/internal/client/links.go"]
+
+description = """
+An error path changes both its HTTP status and its documented error code. A Go
+gateway keys its own error mapping off the old code and the old status, so it
+starts treating a missing link as an upstream fault.
+"""
+
+notes = """
+Designed as the hardest contract case; measured easier than expected, and the
+reason is worth recording rather than quietly enjoying.
+
+The intent was that the status number is not a searchable token — a bare integer
+is filtered out of signal extraction, and should be, or every diff would match
+every diff — leaving the whole lexical weight on the removed error code string,
+which the shared library and the conventions document *also* contain. Ranking
+the repository that *consumes* the code above two that merely define or document
+it looked like a distinction lexical matching could not make.
+
+At the V2.2 baseline it makes it anyway, at outright rank 1, because the
+consumer matches the error code in two files *and* shares the surrounding
+envelope vocabulary, while the definer and the documenter each match once. That
+is luck of proportion, not understanding: the win would evaporate if the shared
+library grew a second reference. Treat the rank as fragile, and note that the
+difficulty this case was built for still exists — it has simply moved to the
+review tier, where the model must say the gateway *breaks* rather than that
+three repositories *mention* an error code.
+"""

@@ -12,6 +12,7 @@ names_in_production_code`` checks directly.
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -24,12 +25,55 @@ from panorama.fixtures.bootstrap import BootstrapError
 
 # The mock organisation and its seeded PR branches. This is the expectation the
 # graded core is built against; it lives in the test, never in production code.
-EXPECTED_REPOS = {"acme-api", "acme-web", "acme-shared", "acme-contracts"}
+#
+# V2.2 grew this from four TypeScript-and-docs repositories to six across three
+# languages. The two new ones consume the API over HTTP only, so nothing in any
+# manifest records that they depend on it — which is the condition the
+# structural retrieval channels have to cope with.
+EXPECTED_REPOS = {
+    "acme-api",
+    "acme-web",
+    "acme-shared",
+    "acme-contracts",
+    "acme-analytics",
+    "acme-gateway",
+}
 SEEDED_BRANCHES = {
-    "acme-api": {"p1-rename", "p3-endpoint-conventions", "p4-docs-cleanup"},
-    "acme-web": {"p2-local-validator"},
-    "acme-shared": set(),
+    "acme-api": {
+        "p1-rename",
+        "p3-endpoint-conventions",
+        "p4-docs-cleanup",
+        "remove-stats-endpoint",
+        "expired-status-code",
+        "drop-archived-status",
+        "unversioned-exports-endpoint",
+        "rename-private-helper",
+        "bump-express",
+    },
+    "acme-web": {"p2-local-validator", "unsafe-cache-access"},
+    "acme-shared": {"narrow-format-input"},
     "acme-contracts": set(),
+    "acme-analytics": {
+        "local-timestamp-format",
+        "page-limit-constant",
+        "reformat-report",
+    },
+    "acme-gateway": {
+        "add-retry-helper",
+        "local-time-cache-endpoint",
+        "add-shortcode-tests",
+    },
+}
+
+# One manifest per language, so the language packs in V2.3 and the dependency
+# graph in V2.4 have all three to read.
+EXPECTED_MANIFESTS = {
+    "acme-api": "package.json",
+    "acme-web": "package.json",
+    "acme-shared": "package.json",
+    "acme-contracts": "package.json",
+    "acme-analytics": "pyproject.toml",
+    "acme-gateway": "go.mod",
 }
 
 
@@ -57,10 +101,22 @@ def built(tmp_path: Path):
     return bootstrap(dest_root=dest)
 
 
-def test_builds_all_four_repos(built) -> None:
+def test_builds_every_repo(built) -> None:
     assert {r.name for r in built.repos} == EXPECTED_REPOS
     for repo in built.repos:
         assert (repo.path / ".git").is_dir(), f"{repo.name} is not a git repo"
+
+
+def test_every_repo_declares_itself_in_a_manifest(built) -> None:
+    """V2.4 resolves dependency edges declared-name to declared-name.
+
+    That only works if every repository actually ships the manifest its language
+    uses. A repo without one is invisible to the dependency graph, and would be
+    a silent hole in the corpus rather than a failing case.
+    """
+    for repo in built.repos:
+        manifest = EXPECTED_MANIFESTS[repo.name]
+        assert (repo.path / manifest).is_file(), f"{repo.name} has no {manifest}"
 
 
 def test_seeded_branches_exist(built) -> None:
@@ -76,19 +132,68 @@ def test_every_repo_rests_on_main(built) -> None:
 
 @pytest.mark.parametrize(
     ("repo_name", "branch"),
-    [
-        ("acme-api", "p1-rename"),
-        ("acme-api", "p3-endpoint-conventions"),
-        ("acme-api", "p4-docs-cleanup"),
-        ("acme-web", "p2-local-validator"),
-    ],
+    sorted((repo, branch) for repo, bs in SEEDED_BRANCHES.items() for branch in bs),
 )
 def test_seeded_defect_visible_via_diff(built, repo_name: str, branch: str) -> None:
-    """S1 exit criterion: each seeded defect shows up in ``git diff``."""
+    """S1 exit criterion: each seeded change shows up in ``git diff``.
+
+    A branch that produces an empty diff scores as a case retrieval found
+    nothing for, which is indistinguishable from a retrieval failure — so an
+    empty diff has to fail here, loudly, at the fixture layer.
+    """
     repo = next(r for r in built.repos if r.name == repo_name)
     # `git diff --quiet` exits non-zero when there IS a difference.
     result = git(repo.path, "diff", "--quiet", "main", branch)
     assert result.returncode != 0, f"{repo_name}#{branch} produced an empty diff"
+
+
+def test_negative_controls_change_no_public_surface(built) -> None:
+    """The negative controls have to be *controls*, not just small changes.
+
+    Each of these is a change a reviewer might plausibly comment on, and the
+    corpus depends on none of them altering anything another repository could
+    reference. Asserting the shape here keeps a later edit to the fixture data
+    from quietly turning a control into a positive.
+    """
+    api = next(r for r in built.repos if r.name == "acme-api")
+
+    # A private rename touches only the helper's own name, nowhere else. Read
+    # the changed lines alone: a context line legitimately shows the exported
+    # function the helper is called from.
+    diff = git(api.path, "diff", "main", "rename-private-helper").stdout
+    changed = [
+        line
+        for line in diff.splitlines()
+        if line[:1] in "+-" and not line.startswith(("+++", "---"))
+    ]
+    assert any("normalizeShortCode" in line for line in changed)
+    assert any("canonicalizeShortCode" in line for line in changed)
+    assert not any("export" in line for line in changed), (
+        "the renamed helper must not be exported"
+    )
+
+    # A dependency bump touches the manifest and nothing else.
+    files = git(
+        api.path, "diff", "--name-only", "main", "bump-express"
+    ).stdout.split()
+    assert files == ["package.json"]
+
+    # A formatting-only change adds and removes the same identifiers. Compared
+    # on identifiers rather than whitespace-delimited chunks, because re-wrapping
+    # a line legitimately moves punctuation around without touching a name.
+    analytics = next(r for r in built.repos if r.name == "acme-analytics")
+    reformat = git(analytics.path, "diff", "main", "reformat-report").stdout
+    added, removed = set(), set()
+    for line in reformat.splitlines():
+        if line.startswith(("+++", "---")):
+            continue
+        if line.startswith("+"):
+            added.update(re.findall(r"[A-Za-z_]\w*", line[1:]))
+        elif line.startswith("-"):
+            removed.update(re.findall(r"[A-Za-z_]\w*", line[1:]))
+    assert added == removed, (
+        "a formatting-only change must not introduce or drop an identifier"
+    )
 
 
 def test_p1_renames_response_field(built) -> None:
@@ -128,18 +233,75 @@ def test_force_overwrites_foreign_directory(tmp_path: Path) -> None:
     assert not (dest / "acme-api" / "important.txt").exists()
 
 
-def test_no_fixture_names_in_production_code() -> None:
-    """Constraint #2: no fixture repo/field/branch names in production code."""
+# Fixture-specific tokens that must never appear in production code: repo names,
+# field names, branch names, and the symbols the corpus is labelled against.
+# Extended at V2.2 with the vocabulary of the polyglot repositories and the new
+# cases — the corpus grew, so the surface constraint #2 has to cover grew too.
+#
+# Every entry has to be a token no general-purpose reviewer would ever need.
+# Generic words are deliberately absent: `archived` would flag `gh repo list
+# --no-archived`, and a constraint test that cries wolf is a constraint test
+# somebody eventually deletes.
+FORBIDDEN_TOKENS = (
+    "acme",
+    "target_url",
+    "validateurl",
+    "p1-rename",
+    "p2-local",
+    "shortcode",
+    "linkstatus",
+    "max_links_per_page",
+    "timestamp_format",
+    "retrywithbackoff",
+    "formattimestamp",
+    "drop-archived-status",
+    "unversioned-exports",
+    "bump-express",
+)
+
+# Every production module, so a fixture token cannot hide in one nobody listed.
+PRODUCTION_MODULES = (
+    "panorama.cli",
+    "panorama.config",
+    "panorama.claude_runner",
+    "panorama.delivery",
+    "panorama.demo",
+    "panorama.doctor",
+    "panorama.errors",
+    "panorama.fixtures.bootstrap",
+    "panorama.intake",
+    "panorama.models",
+    "panorama.prompts",
+    "panorama.provision",
+    "panorama.render",
+    "panorama.retrieval",
+    "panorama.review",
+    "panorama.screening",
+    "panorama.validation",
+    "panorama.workspace",
+    "panorama.evaluation.cases",
+    "panorama.evaluation.report",
+    "panorama.evaluation.runner",
+    "panorama.evaluation.scoring",
+)
+
+
+@pytest.mark.parametrize("module_name", PRODUCTION_MODULES)
+def test_no_fixture_names_in_production_code(module_name: str) -> None:
+    """Constraint #2: no fixture repo/field/branch names in production code.
+
+    The risk this guards against gets worse, not better, as the corpus grows: a
+    retrieval channel tuned against 18 labelled cases is one careless special
+    case away from knowing the answers.
+    """
     import importlib
 
-    forbidden = ("acme", "target_url", "validateurl", "p1-rename", "p2-local")
-    for name in ("panorama.cli", "panorama.fixtures.bootstrap"):
-        module = importlib.import_module(name)
-        source = Path(module.__file__).read_text().lower()
-        for token in forbidden:
-            assert token not in source, (
-                f"fixture-specific token {token!r} leaked into {name}"
-            )
+    module = importlib.import_module(module_name)
+    source = Path(module.__file__).read_text().lower()
+    for token in FORBIDDEN_TOKENS:
+        assert token not in source, (
+            f"fixture-specific token {token!r} leaked into {module_name}"
+        )
 
 
 def test_cli_bootstrap_command(tmp_path: Path) -> None:

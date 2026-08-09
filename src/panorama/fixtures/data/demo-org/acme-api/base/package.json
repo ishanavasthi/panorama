@@ -4,6 +4,7 @@
   "description": "Link shortener API. Owns the link response shape and handlers.",
   "main": "src/server.ts",
   "dependencies": {
-    "express": "^4.19.0"
+    "express": "^4.19.0",
+    "@acme/contracts": "^1.0.0"
   }
 }

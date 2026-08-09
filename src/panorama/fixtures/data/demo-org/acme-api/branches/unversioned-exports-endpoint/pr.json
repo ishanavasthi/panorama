@@ -1,0 +1,4 @@
+{
+  "title": "Add a bulk exports endpoint",
+  "body": "Reporting needs to pull a caller's links in one request. Adds GET /exports returning the collection plus the time it was produced."
+}

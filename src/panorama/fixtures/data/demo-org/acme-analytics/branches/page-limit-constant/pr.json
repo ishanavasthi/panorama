@@ -1,0 +1,4 @@
+{
+  "title": "Page link queries with a reporting page limit",
+  "body": "Reports pull far more links than a single request should return. Adds MAX_LINKS_PER_PAGE and DEFAULT_LINKS_PER_PAGE for reporting and a paged fetch that respects them."
+}

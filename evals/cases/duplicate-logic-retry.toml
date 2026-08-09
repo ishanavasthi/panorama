@@ -1,0 +1,23 @@
+id = "duplicate-logic-retry"
+repo = "acme-gateway"
+base = "main"
+head = "add-retry-helper"
+
+expect_finding = true
+category = "duplicate_logic"
+target_repos = ["acme-shared"]
+target_files = ["acme-shared/src/retry.ts"]
+
+description = """
+A Go service adds its own bounded-retry loop with exponential backoff. The
+shared library already publishes the organisation's retry policy, so the new
+code is a second, silently divergent copy of a decision the org has already made.
+"""
+
+notes = """
+Cross-language, but winnable: the helper name and its parameter vocabulary
+survive the language boundary intact, because the author naturally reached for
+the same words. That is realistic — duplicated logic usually *does* look alike —
+and it is the reason this case is easier than the date-formatting duplicate,
+where the naming conventions of the two languages diverge.
+"""

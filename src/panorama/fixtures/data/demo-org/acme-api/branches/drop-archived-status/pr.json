@@ -1,0 +1,4 @@
+{
+  "title": "Remove the archived link status",
+  "body": "Nothing in the API ever sets a link to archived — expiry covers the case. Removing the member from the status enum."
+}

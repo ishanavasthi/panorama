@@ -522,11 +522,86 @@ def test_run_offline_scores_every_checked_in_case(org):
     assert len(scores) == len(real_cases())
 
 
-def test_checked_in_cases_all_pass_retrieval(org):
-    """The corpus is ground truth: if it fails, either retrieval or a label is wrong."""
+#: Cases the V2.2 corpus expects retrieval to fail, with the reason. These are
+#: not tolerated failures — they are *designed* ones, each pinned to the
+#: milestone meant to fix it. A case leaving this set is progress; a case
+#: entering it without a note is a regression the baseline gate will catch.
+EXPECTED_RETRIEVAL_FAILURES = {
+    # Absence has no lexical footprint: the diff and the convention it breaks
+    # share no vocabulary at all. Only the manifest edge can find it (V2.4).
+    "convention-unversioned-endpoint",
+}
+
+
+def test_checked_in_cases_pass_retrieval_except_the_designed_failures(org):
+    """The corpus is ground truth: an unexpected failure is retrieval or a label.
+
+    Pinning the expected failures by id, rather than asserting a pass rate,
+    means a *different* case breaking cannot be absorbed by one being fixed.
+    """
     scores, _ = run_offline(real_cases(), org_root=org)
-    failing = [s.case_id for s in scores if not s.passed]
-    assert failing == []
+    failing = {s.case_id for s in scores if not s.passed}
+    assert failing == EXPECTED_RETRIEVAL_FAILURES
+
+
+def test_the_corpus_covers_every_finding_category(org):
+    """Every category the model can emit needs at least one labelled case.
+
+    A category with no case is a category nothing measures, which is how a
+    reviewer quietly stops producing one.
+    """
+    from typing import get_args
+
+    from panorama.models import Category
+
+    labelled = {c.category for c in real_cases() if c.category}
+    assert labelled == set(get_args(Category))
+
+
+def test_negative_controls_are_a_meaningful_share_of_the_corpus(org):
+    """Negatives are scored as loudly as positives, so there have to be enough.
+
+    The failure that destroys trust in a reviewer is a confident finding about
+    nothing, and a corpus of positives cannot see it coming.
+    """
+    cases = real_cases()
+    negatives = [c for c in cases if not c.expect_finding]
+    assert len(negatives) / len(cases) >= 0.25
+
+
+def test_most_negative_controls_assert_something_checkable_offline(org):
+    """A negative that asserts nothing is scored live only, and must stay rare.
+
+    V2.1 shipped with the single inherited negative asserting nothing, so the
+    offline gate covered none of them. The expansion's job was to fix that.
+    """
+    negatives = [c for c in real_cases() if not c.expect_finding]
+    scorable = [c for c in negatives if c.retrieval_scorable]
+    assert len(scorable) >= len(negatives) - 1
+
+
+def test_the_corpus_spans_more_than_one_language(org):
+    """Retrieval that only works on one language would score well on a corpus
+    that only contains one. Manifest variety is the cheapest proxy for that."""
+    manifests = {
+        manifest.name
+        for repo in org.iterdir()
+        if repo.is_dir()
+        for manifest in repo.iterdir()
+        if manifest.name in {"package.json", "pyproject.toml", "go.mod"}
+    }
+    assert len(manifests) >= 3
+
+
+def test_every_positive_case_produces_a_non_empty_diff(org):
+    """A case whose branch is identical to its base scores as a retrieval miss.
+
+    That is indistinguishable from bad retrieval in the report, so it has to
+    fail here instead — at the point where the cause is obvious.
+    """
+    for case in real_cases():
+        pull_request, _, _ = runner_mod.retrieve_for_case(case, org)
+        assert pull_request.diff.strip(), f"{case.id}: empty diff"
 
 
 def test_offline_never_constructs_a_claude_runner(org, monkeypatch):

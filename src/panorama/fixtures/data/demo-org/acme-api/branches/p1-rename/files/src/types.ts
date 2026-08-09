@@ -4,4 +4,14 @@ export interface LinkResponse {
   id: string;
   target_url: string;
   created_at: string;
+  expires_at: string | null;
+  status: LinkStatus;
+}
+
+// Lifecycle states a link can be in. Reporting clients switch on these values,
+// so dropping a member is a contract change even though nothing is renamed.
+export enum LinkStatus {
+  Active = "active",
+  Expired = "expired",
+  Archived = "archived",
 }

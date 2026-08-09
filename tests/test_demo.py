@@ -98,17 +98,24 @@ def test_seed_fails_when_gh_is_not_authenticated() -> None:
 
 
 def test_existing_repo_without_recreate_is_refused() -> None:
-    runner = FakeRunner(existing={"testorg/acme-api"})
+    # The conflict is placed on the *first* repository the seeder reaches. The
+    # seeder creates repositories one at a time, so a conflict further down the
+    # list legitimately leaves the earlier ones created — it refuses to clobber,
+    # but it does not roll back. That is V1 demo behaviour, recorded here rather
+    # than asserted away.
+    first = demo_repo_names()[0]
+    runner = FakeRunner(existing={f"testorg/{first}"})
     with pytest.raises(DemoError, match="already exists"):
         _seeder(runner).seed()
     assert not runner.with_argv("repo", "create")  # nothing was created
 
 
 def test_recreate_deletes_before_creating() -> None:
-    runner = FakeRunner(existing={"testorg/acme-api"})
+    first = demo_repo_names()[0]
+    runner = FakeRunner(existing={f"testorg/{first}"})
     _seeder(runner, recreate=True).seed()
     deletes = runner.with_argv("repo", "delete")
-    assert any(c[3] == "testorg/acme-api" for c in deletes)
+    assert any(c[3] == f"testorg/{first}" for c in deletes)
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,4 @@
+{
+  "title": "Stamp reports with a formatted UTC timestamp",
+  "body": "Reports had no indication of when they were produced. Adds a small timestamps module that renders a datetime as UTC ISO-8601, and a footer line that uses it."
+}

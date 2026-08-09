@@ -1,0 +1,4 @@
+{
+  "title": "Retry upstream calls with exponential backoff",
+  "body": "A single upstream blip currently fails the request. Adds a small retry package with a bounded attempt budget and a doubling delay."
+}

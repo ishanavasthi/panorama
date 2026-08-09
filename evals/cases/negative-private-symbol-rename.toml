@@ -1,0 +1,27 @@
+id = "negative-private-symbol-rename"
+repo = "acme-api"
+base = "main"
+head = "rename-private-helper"
+
+expect_finding = false
+expect_no_hits = true
+
+description = """
+A module-private helper is renamed. It is not exported, has no caller outside
+the file it lives in, and cannot be referenced from another repository at all.
+A correct review reports no cross-repository impact.
+"""
+
+notes = """
+The most important negative in the corpus. A reviewer that flags this has
+learned to flag *renames* rather than to find *contract breaks*, and it will be
+muted by its readers inside a week. It is the direct control for the field-rename
+case: same shape of diff, same kind of token churn, opposite correct answer.
+
+The offline expectation is the strong one — the change must produce no sibling
+hits at all — and the fixture is built so that is achievable without contrivance.
+Both helper names exist nowhere else in the organisation, the call site's field
+name is too short to be a signal, and the parameter is named so that it falls in
+the generic-token stoplist. What remains is two identifiers that genuinely have
+no reader anywhere.
+"""

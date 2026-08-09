@@ -1,0 +1,4 @@
+{
+  "title": "Expose cache status for operators",
+  "body": "Adds a small handler reporting how many entries the gateway is holding and when the count was taken, so on-call can check it without shelling in."
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@acme/contracts",
+  "version": "1.0.0",
+  "description": "Organisation-wide API conventions: error envelope, timestamps, versioning.",
+  "files": [
+    "CONVENTIONS.md",
+    "docs"
+  ]
+}

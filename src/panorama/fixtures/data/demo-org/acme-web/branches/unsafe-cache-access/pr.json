@@ -1,0 +1,4 @@
+{
+  "title": "Cache fetched links in memory",
+  "body": "Avoids re-fetching a link we have already rendered. Adds a small in-memory cache and checks it before hitting the API."
+}

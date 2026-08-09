@@ -1,0 +1,4 @@
+{
+  "title": "Take a Date in formatTimestamp instead of a loose union",
+  "body": "formatTimestamp accepted `Date | string` and re-parsed the string on every call. Narrowing the parameter to `Date` moves parsing to the boundary and removes a silent coercion."
+}

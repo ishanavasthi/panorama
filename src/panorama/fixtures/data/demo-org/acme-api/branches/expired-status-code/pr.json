@@ -1,0 +1,4 @@
+{
+  "title": "Return 410 Gone for links we no longer serve",
+  "body": "A short code we have stopped serving is not the same as one that never existed. Switching the resolve handler from 404 not_found to 410 gone so callers can tell the two apart."
+}

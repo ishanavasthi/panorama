@@ -1,0 +1,12 @@
+[project]
+name = "acme-analytics"
+version = "1.0.0"
+description = "Reporting client for the Acme link service."
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

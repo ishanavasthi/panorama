@@ -23,4 +23,10 @@ This is the case V1's S4 recorded as the weak one: a violation is about an
 neighbour tends to tie rather than lead. Competition ranking in the scorer means
 that tie is reported honestly instead of being resolved by alphabetical luck.
 Channel-level attribution is future work (V2.7).
+
+V2.2 update: on the expanded corpus this case no longer ties for first — it
+loses it. The reporting client outranks the conventions repository on incidental
+vocabulary the diff happens to share with it. Nothing about retrieval changed;
+the corpus simply grew enough bystanders for the weakness to show its real
+shape. This is the clearest single argument for the expansion.
 """

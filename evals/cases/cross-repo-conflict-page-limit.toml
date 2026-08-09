@@ -1,0 +1,27 @@
+id = "cross-repo-conflict-page-limit"
+repo = "acme-analytics"
+base = "main"
+head = "page-limit-constant"
+
+expect_finding = true
+category = "cross_repo_conflict"
+target_repos = ["acme-shared"]
+target_files = ["acme-shared/src/limits.ts"]
+
+description = """
+A reporting client defines its own pagination limits. The shared library already
+publishes constants with the same names and different values, so two
+repositories now disagree about one number and neither is obviously wrong.
+"""
+
+notes = """
+The only `cross_repo_conflict` case, and the category's defining shape: nothing
+is broken *yet*. Both repositories are internally consistent, the code compiles
+everywhere, and the disagreement only surfaces as a bug when a report silently
+requests more than the API will serve.
+
+Lexically easy — the constants are spelled identically in both languages, which
+is exactly how this failure happens in practice. The measurement value is at the
+review tier: does the model report a *conflict* rather than a duplicate? The two
+categories look similar from retrieval's side and are not the same finding.
+"""

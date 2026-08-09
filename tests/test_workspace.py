@@ -1,8 +1,8 @@
 """Offline tests for the read-only workspace view and org-map generation.
 
 Builds the fixtures with real git into a temp dir, then asserts the workspace
-enumerates the four repos at known SHAs, contains references safely, and derives
-an org map from repository content with no fixture names in the code.
+enumerates every repo at known SHAs, contains references safely, and derives an
+org map from repository content with no fixture names in the code.
 """
 
 from __future__ import annotations
@@ -16,7 +16,14 @@ import pytest
 from panorama.fixtures import bootstrap
 from panorama.workspace import Workspace, WorkspaceError
 
-EXPECTED_REPOS = {"acme-api", "acme-web", "acme-shared", "acme-contracts"}
+EXPECTED_REPOS = {
+    "acme-api",
+    "acme-web",
+    "acme-shared",
+    "acme-contracts",
+    "acme-analytics",
+    "acme-gateway",
+}
 _FULL_SHA_LEN = 40
 
 
@@ -80,7 +87,7 @@ def test_org_map_lists_every_repo(workspace: Workspace) -> None:
     for name in EXPECTED_REPOS:
         assert f"## {name}" in org_map
     assert org_map.startswith("# Organisation map")
-    assert "4 repositories" in org_map
+    assert f"{len(EXPECTED_REPOS)} repositories" in org_map
 
 
 def test_org_map_discovers_convention_documents(workspace: Workspace) -> None:

@@ -1,0 +1,4 @@
+{
+  "title": "Rename the internal short-code helper",
+  "body": "normalizeShortCode does more than normalising — it picks a canonical form. Renaming it to canonicalizeShortCode. The helper is module-private and has no callers outside this file."
+}
