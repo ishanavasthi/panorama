@@ -14,6 +14,11 @@ Live — these govern current work:
 - **`DECISIONS.md`** — the plain-language record of trade-offs and limitations,
   updated only when a milestone actually produced one, and only *after* the
   implementation.
+- **`BACKLOG.md`** — authoritative on **what is open**: every known defect,
+  weakness and deferred feature, each with a stable id (`A1`, `C2`, …) so it can
+  be picked up by name. `CHECKLIST.md` says whether a milestone is done;
+  this says what is still wrong regardless of milestone. Move an item to `done`
+  in the same commit that fixes it.
 
 Reference — explain the system rather than track it; update when the thing they
 describe changes:

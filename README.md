@@ -537,7 +537,9 @@ The full reasoning, milestone by milestone, is in `DECISIONS.md`. In brief:
 
 ## Known limitations
 
-Measured or accepted, so they can be stated rather than discovered:
+Measured or accepted, so they can be stated rather than discovered. Each has an
+id in `BACKLOG.md` with the evidence, what has already been tried, and what a
+real fix would involve:
 
 - **Two contract-break cases rank their target second, not first.** Their
   consumers reach the changed service over HTTP, so no manifest and no import
@@ -622,9 +624,10 @@ Verified end to end against a real private organisation of six repositories and
 eighteen pull requests — see [Live demo](#live-demo-a-real-private-organisation).
 
 `v2plan.md` has the build order, `CHECKLIST.md` the status of every milestone
-including what was dropped and why, `DECISIONS.md` the reasoning and the
-measurements, `docs/how-it-works.md` the mechanism, and `docs/corpus.md` the
-ground truth quality is measured against.
+including what was dropped and why, `BACKLOG.md` every known open item with a
+stable id, `DECISIONS.md` the reasoning and the measurements,
+`docs/how-it-works.md` the mechanism, and `docs/corpus.md` the ground truth
+quality is measured against.
 
 Not done, and honest about it: **inline review comments were dropped** in favour
 of the fingerprint and suppression work in the same milestone. A summary comment
