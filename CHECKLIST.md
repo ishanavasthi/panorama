@@ -63,27 +63,70 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped (with rea
 
 ---
 
-## V2.2 — Corpus expansion, polyglot
+## V2.2 — Corpus expansion, polyglot · **DONE**
 
-- [ ] Fixture repo: Python consumer of the API
-- [ ] Fixture repo: Go service
-- [ ] Language coverage confirmed across TS/JS, Python, Go in the corpus
-- [ ] `contract_break` cases: field rename · type narrowing · removed endpoint ·
+- [x] Fixture repo: Python consumer of the API (`acme-analytics`)
+- [x] Fixture repo: Go service (`acme-gateway`)
+- [x] Language coverage confirmed across TS/JS, Python, Go in the corpus
+      — one manifest per language, asserted present for every repo
+- [x] `contract_break` cases: field rename · type narrowing · removed endpoint ·
       changed status code · removed enum member
-- [ ] `duplicate_logic` cases: validator · retry · date formatting
-- [ ] `convention` cases: error envelope · timestamps · versioning
-- [ ] `cross_repo_conflict` case: one constant, two definitions
-- [ ] `single_repo` case
-- [ ] Negative controls (~1/3 of corpus): docs-only · test-only · formatting-only
+- [x] `duplicate_logic` cases: validator · retry · date formatting
+- [x] `convention` cases: error envelope · timestamps · versioning
+- [x] `cross_repo_conflict` case: one constant, two definitions
+- [x] `single_repo` case
+- [x] Negative controls (5 of 18, 28%): docs-only · test-only · formatting-only
       · dependency bump · **private-symbol rename with no consumer**
-- [ ] Bootstrap materialises all 6 repos and all case branches offline
-- [ ] Test: every case's labels self-consistent (target repo + file exist at the
+- [x] Bootstrap materialises all 6 repos and all 17 case branches offline
+- [x] Test: every case's labels self-consistent (target repo + file exist at the
       labelled path on the target's branch)
-- [ ] Test: constraint #2 extended to the new fixture data
-- [ ] Test: every positive case produces a non-empty diff
-- [ ] **Baseline re-measured** on the full 18-case corpus (expect it to drop)
+- [x] Test: constraint #2 extended to the new fixture data — and to *every*
+      production module, not the two that were listed before
+- [x] Test: every positive case produces a non-empty diff
+- [x] Test: the corpus covers every category the model can emit
+- [x] Test: the negative controls are still controls (no public surface changed,
+      no identifier added or dropped by the formatting-only case)
+- [x] **Baseline re-measured** on the full 18-case corpus — it dropped
+- [x] `docs/corpus.md`: the corpus design spec, including what it does *not*
+      cover and the rules for changing it
+- [x] Full suite 466 green; ruff clean
 
-**Exit:** 18 cases, no network, baseline re-recorded.
+**Exit met:** 18 cases bootstrap and score with no network; baseline re-recorded.
+
+### Findings from V2.2
+
+- **The baseline dropped, which is the milestone working.** recall@1 1.000 →
+  **0.750**, recall@3 1.000 → **0.917**, MRR 1.000 → **0.833**. Outright
+  recall@1 went the other way, 0.667 → **0.750**, purely because the corpus
+  gained ten easy-to-rank cases; it is an average, and averages move for
+  uninteresting reasons. The per-case table is the thing to read.
+- **The inherited convention case got measurably worse without retrieval
+  changing at all.** It ranked first in a three-way tie on four cases; on 18 it
+  ranks *second*, beaten by a reporting client that shares incidental
+  vocabulary with the diff. Nothing regressed — the corpus simply grew enough
+  bystanders for the existing weakness to show its true shape. This is the
+  single clearest argument for having done the expansion before the channels.
+- **One case is a deliberate, load-bearing zero.** The unversioned-endpoint
+  violation shares no vocabulary with the document it breaks, because the
+  violation *is* an absence. It is unfindable lexically by construction and is
+  V2.4's target. It is pinned by id in the tests, so a different case breaking
+  cannot hide inside the same failure count.
+- **Incidental token collision is the dominant noise source at this size.**
+  Two negative controls needed a local variable renamed before they produced
+  zero hits — one collided with `formatted` inside the phrase
+  "locale-formatted" in a conventions document. That is what the fusion step
+  will have to be robust to, and it is worth remembering when a channel looks
+  like it is working.
+- **A case designed to be hard turned out easy, and the note says so.** The
+  status-code break ranks its target outright first, because the consumer
+  happens to mention the removed error code twice while the definer and the
+  documenter mention it once each. That is luck of proportion, not
+  understanding, and the rank is fragile.
+- **Two process bugs found by doing this.** Ruff was linting the fixture data
+  tree — an autofix there would have changed a labelled case without touching a
+  label. And bootstrapping from the wrong working directory silently built a
+  second organisation inside the data tree, producing eval results that
+  disagreed with a hand probe until the stray directory was found.
 
 ---
 

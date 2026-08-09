@@ -178,21 +178,40 @@ explicit "no supported cross-repository impact detected" result, not a silence.
 
 ## Mock organisation
 
-| Repo | Purpose |
-|---|---|
-| `acme-api` | TypeScript/Express link API; owns response shape and handlers. |
-| `acme-web` | TypeScript client that types and destructures API responses. |
-| `acme-shared` | Shared `validateUrl`, formatting helpers, error constants. |
-| `acme-contracts` | Error envelope, UTC timestamps, versioning documents. |
+Six repositories, three languages. `docs/corpus.md` is authoritative on the
+corpus design and on why each case is labelled the way it is; this table is the
+orientation.
 
-Seed PRs: **P1** rename `url`→`target_url` in `acme-api` (contract break vs
-`acme-web`); **P2** local URL validator in `acme-web` (duplicate vs
-`acme-shared`); **P3** endpoint with bare-string errors/local timestamps
-(convention vs `acme-contracts`); **P4** docs cleanup control (must produce no
-high-severity cross-repo finding).
+| Repo | Language | Purpose |
+|---|---|---|
+| `acme-api` | TypeScript | Express link API; owns response shape, endpoints, handlers. |
+| `acme-web` | TypeScript | Client that types and destructures API responses. |
+| `acme-shared` | TypeScript | `validateUrl`, formatting, error constants, retry policy, pagination limits. |
+| `acme-contracts` | docs | Error envelope, UTC timestamps, versioning. Publishes as `@acme/contracts`. |
+| `acme-analytics` | Python | Reporting client; consumes the API over HTTP only. |
+| `acme-gateway` | Go | Edge gateway; consumes the API over HTTP only. |
 
-Fixture source files are checked in as plain data. No nested `.git` directories
-are ever committed.
+Three properties are load-bearing and must not be "tidied up":
+
+- The Python and Go consumers have **no manifest edge** to anything. Their
+  coupling is the HTTP contract, so the dependency-graph channel is silent on a
+  third of the corpus — which is the condition fusion has to survive.
+- `acme-contracts` **declares a package name that differs from its directory
+  name**, so resolving dependency edges by matching directory names fails a
+  test instead of passing one.
+- Each consumer consumes a **different slice** of the contract, so each
+  contract-break case has exactly the targets it genuinely breaks.
+
+18 labelled cases in `evals/cases/`: 13 positive across all five categories, 5
+negative controls. One case — an unversioned public endpoint — is a **deliberate
+zero**: the violation is an *absence*, so it has no lexical footprint and only a
+manifest edge can find it. It is V2.4's target and is pinned by id in the tests.
+
+Fixture source files are checked in as plain data, excluded from ruff (a lint
+autofix there would change a labelled case without touching a label). No nested
+`.git` directories are ever committed. Always run `panorama fixtures bootstrap`
+from the repository root — running it elsewhere builds a second organisation
+wherever you are standing.
 
 ## Milestones
 

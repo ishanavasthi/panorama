@@ -62,7 +62,7 @@ retrieval → Claude review → host evidence validation → reference-only repo
 Every finding cites `repo/path:line`; findings whose evidence the host cannot
 verify on disk are discarded and counted, never silently softened.
 
-The four seeded pull requests are:
+The original four seeded pull requests are:
 
 | Branch | Repo | Seeded defect |
 |---|---|---|
@@ -70,6 +70,12 @@ The four seeded pull requests are:
 | `p2-local-validator` | acme-web | reimplements a helper that already exists in a shared repo |
 | `p3-endpoint-conventions` | acme-api | ignores org error-envelope and timestamp conventions |
 | `p4-docs-cleanup` | acme-api | docs-only control that should raise nothing cross-repo |
+
+V2 grew the fixture organisation to **six repositories across TypeScript, Python
+and Go, with 18 labelled cases** — including five negative controls, of which
+the sharpest is a rename of a module-private helper no sibling can reference.
+`panorama fixtures bootstrap` builds all of them; `docs/corpus.md` explains what
+each case is for and, just as importantly, what the corpus does not cover.
 
 ## Evaluation
 
@@ -128,9 +134,10 @@ private repositories in an account you control:
 uv run panorama demo --github <your-user-or-org>
 ```
 
-This **creates private repositories** (`acme-api`, `acme-web`, `acme-shared`,
-`acme-contracts`) and opens a pull request for each seeded change — the same
-P1–P4 defects the offline evaluation uses. It always confirms before writing
+This **creates one private repository per fixture repo** (`acme-api`,
+`acme-web`, `acme-shared`, `acme-contracts`, `acme-analytics`, `acme-gateway`)
+and opens a pull request for each seeded change — the same defects the offline
+evaluation uses. It always confirms before writing
 (pass `--yes` to skip the prompt, `--recreate` to replace existing repos). Then
 review a seeded PR live, optionally posting the result back:
 

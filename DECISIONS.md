@@ -703,3 +703,146 @@ is scored only in the live tier. The corpus expansion adds negatives that *are*
 offline-checkable, the strongest being a rename of a private symbol no sibling
 imports, where "no sibling should surface" is a real expectation rather than a
 threshold pulled out of the air.
+
+## V2.2 — building a corpus that can say no
+
+### The decision
+
+Spend a whole milestone on test data. No feature, no channel, no user-visible
+change: six repositories instead of four, three languages instead of one, and
+eighteen labelled pull requests instead of four. The V2.1 baseline had come back
+perfect on every metric, and a benchmark everything passes is not a benchmark —
+it is a formality. Every retrieval improvement planned for the rest of V2 would
+have been unmeasurable against it.
+
+The design goal was therefore *headroom*, not a good score. Several cases were
+built to fail.
+
+### Making the organisation harder on purpose
+
+Three choices in the fixture organisation do most of the work.
+
+**The new consumers speak only HTTP.** A Python reporting client and a Go
+gateway both depend on the API, and no manifest anywhere in the organisation
+records that they exist. That is completely ordinary in a real polyglot company
+— and it means the dependency-graph channel coming in V2.4 will be *silent* on a
+third of the corpus. Building a corpus where the new channel always has
+something to say would have flattered it. This one forces the fusion step to
+cope with a channel that abstains.
+
+**The conventions repository publishes under a name that is not its directory
+name.** The tempting way to build a dependency graph is to match a dependency
+string against a folder in the workspace. It works perfectly on tidy fixtures
+and fails on nearly every real organisation, where `github.com/acme/api-server`
+publishes `@acme/api`. The corpus now makes that shortcut fail a test instead of
+passing one.
+
+**Each consumer consumes a different slice of the contract.** The web client
+uses one field, the reporting client uses the timestamps and the status values,
+the gateway uses the expiry and the error mapping. Without this, every
+contract-break case would have three correct answers and recall would be high
+for no reason. With it, each case has exactly the repositories it genuinely
+breaks.
+
+### Negative controls that assert something
+
+A third of the corpus is negative — changes where the correct review says
+nothing. These are the easiest cases to fake and the ones that matter most,
+because the failure that destroys trust in a reviewer is a confident finding
+about nothing.
+
+V2.1 shipped with its only negative asserting nothing checkable offline. Four of
+the five now assert the strong version: the change must surface **no sibling
+repository at all**. The most important is a rename of a module-private helper
+that no other repository can even reference — the direct control for the
+field-rename case. Same shape of diff, same churn, opposite correct answer. A
+reviewer that flags it has learned to flag renames rather than to find contract
+breaks.
+
+Getting those expectations to be honest rather than lucky took two rounds of
+renaming local variables in the fixtures, because they collided with unrelated
+words elsewhere in the organisation — one of them with the word "formatted"
+inside the phrase "locale-formatted" in a conventions document. That is worth
+recording as a finding in its own right: at this corpus size, **incidental token
+collision is the dominant source of noise**, not any subtlety of ranking.
+
+### What the re-measured baseline showed
+
+The numbers fell, which is the milestone working:
+
+| Metric | V2.1 (4 cases) | V2.2 (18 cases) |
+|---|---:|---:|
+| recall@1 | 1.000 | **0.750** |
+| recall@3 | 1.000 | **0.917** |
+| MRR | 1.000 | **0.833** |
+| outright recall@1 | 0.667 | 0.750 |
+| file recall | 1.000 | 1.000 |
+
+Outright recall@1 rose, and that is a caution rather than good news: the corpus
+gained ten cases that rank cleanly, and an average moves when you add easy
+members to it. The per-case table is what anyone should read.
+
+The most interesting result is that **the inherited convention case got worse
+without a single line of retrieval changing.** On four repositories it tied for
+first. On six it comes second, beaten by a reporting client that happens to
+share vocabulary with the diff. Nothing regressed — the corpus simply grew
+enough bystanders for a weakness that was always there to show its real size.
+That is the whole argument for measurement before mechanism, demonstrated
+rather than asserted.
+
+### The deliberate zero
+
+One case scores nothing at all, on purpose. A new public endpoint is added
+without a version prefix, violating the organisation's versioning rule. The
+diff and the document it breaks share **no vocabulary whatsoever**, because the
+violation is the *absence* of a path segment, and absence leaves no lexical
+trace. No amount of ranking finds it. The only thing that can is the structural
+fact that the API repository declares the conventions package as a dependency.
+
+It is a load-bearing zero: it is V2.4's target, and it is pinned by name in the
+test suite so that a *different* case breaking later cannot hide inside the same
+failure count. If it ever starts passing for a lexical reason, the case has
+decayed and needs rewriting rather than celebrating.
+
+### An honest downgrade
+
+One case was designed as the hardest in the corpus and measured as one of the
+easiest. A status code and its error code change together; the repository that
+actually breaks ranks first outright. It does so because that repository
+mentions the removed error code twice while the two bystanders mention it once
+each — proportion, not comprehension. The rank would evaporate if the shared
+library grew a second reference. The case note now says this rather than
+letting the number imply the retrieval understood something.
+
+### Two process bugs this surfaced
+
+Both are the kind that produce *wrong measurements* rather than crashes, which
+is why they are worth writing down.
+
+The linter was formatting the fixture data tree. The fixtures are another
+organisation's source code, deliberately written in three languages, and one
+case is a formatting-only control — an autofix there would have silently changed
+a labelled case without touching a single label. The data tree is now excluded.
+
+And bootstrapping the fixtures from the wrong working directory built a second
+copy of the organisation *inside* the data tree, which then presented as part of
+the corpus. It surfaced as an evaluation result that disagreed with a hand
+check, and it cost more time than the bug deserved.
+
+### Limitations this leaves
+
+- **Two of eighteen cases are not scorable offline.** The docs-only control and
+  the single-repository defect both make claims about the *review*, not about
+  retrieval. The report states this on every run rather than counting them as
+  passes.
+- **Cross-language duplicate detection is barely covered, and barely possible.**
+  `format_timestamp` and `formatTimestamp` are different strings and no ranking
+  strategy makes them one. The one case that tests it is winnable only because a
+  shared constant is spelled identically in both languages. If the symbol index
+  cannot beat it either, the honest conclusion is that this needs normalised
+  identifiers — a much larger piece of work than V2 has room for.
+- **Six repositories say nothing about scale.** Selection and the clone budget
+  need a synthesised large organisation, which is V2.8's own fixture problem.
+- **The fixture history is one commit per branch**, which is exactly the
+  condition under which the co-change channel would look far better than it is.
+  That channel cannot be trusted until it is measured on a real organisation.
