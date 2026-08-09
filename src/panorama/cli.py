@@ -11,6 +11,7 @@ from pathlib import Path
 import typer
 
 from panorama import __version__
+from panorama.cache import Cache
 from panorama.claude_runner import ClaudeRunner
 from panorama.config import EVAL_BASELINE_PATH, EVAL_CASES_ROOT
 from panorama.delivery import (
@@ -188,12 +189,27 @@ def review(
 
 
 def _run_pipeline(pull_request, workspace: Workspace, runner: ClaudeRunner):
-    """Retrieval → review → host validation over a ready workspace."""
-    retrieval = retrieve(pull_request, workspace)
-    result = run_review(pull_request, workspace, retrieval, runner=runner)
-    validated = validate_review(result.data, pull_request, workspace)
-    truncated = retrieval.truncated or context_truncated(pull_request.diff)
-    return validated, truncated
+    """Retrieval → review → host validation over a ready workspace.
+
+    The cache is opened per owner and is purely an optimisation: it changes how
+    much of the symbol index has to be rebuilt, never what the review concludes.
+    A cache that cannot be opened is therefore not worth failing a review over —
+    the run simply does the work itself.
+    """
+    try:
+        cache = Cache.for_owner(pull_request.owner)
+    except PanoramaError:
+        cache = None
+
+    try:
+        retrieval = retrieve(pull_request, workspace, cache=cache)
+        result = run_review(pull_request, workspace, retrieval, runner=runner)
+        validated = validate_review(result.data, pull_request, workspace)
+        truncated = retrieval.truncated or context_truncated(pull_request.diff)
+        return validated, truncated
+    finally:
+        if cache is not None:
+            cache.close()
 
 
 def _emit(pull_request, validated, truncated: bool, *, json_output: bool) -> None:

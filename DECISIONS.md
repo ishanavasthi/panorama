@@ -1164,3 +1164,98 @@ That blindness to the diff is the channel's real cost, and it is now pinned by a
 test so it stays a known property rather than a rediscovered surprise: this
 channel votes identically for every pull request in a repository, whatever the
 change actually does.
+
+## V2.5 — asking who actually consumes this
+
+### The decision
+
+Lexical matching asks "does this word appear over there", and cannot tell apart
+a repository that *defines* a name, one that *documents* it, and one that *uses*
+it. On the corpus that is not a theoretical weakness — it is precisely why a
+conventions document and a shared library outrank the service that genuinely
+breaks.
+
+So this channel asks a sharper question: **does another repository import a name
+this change removes?** An import is a declaration of consumption, written by the
+consumer. A repository that imports a symbol the pull request deletes is broken
+by construction rather than by resemblance, and the citation is a specific line
+rather than a lead.
+
+It makes two claims, in a fixed strength order: a sibling importing a removed
+name is a *break*; a sibling exporting an added name is *duplication*. As with
+the dependency channel, rank encodes which claim applies rather than a position
+among whatever turned up, so a duplication signal never outranks a break even in
+a change where no break exists.
+
+### What it bought
+
+| Metric | V2.4 | V2.5 |
+|---|---:|---:|
+| recall@1 | 0.750 | **0.833** |
+| MRR | 0.875 | **0.917** |
+| recall@3 | 1.000 | 1.000 |
+
+Nothing regressed. The case that moved is the cross-language duplicate, which
+had been losing to the conventions repository on incidental shared vocabulary.
+The symbol index can see that the shared library actually *exports* a name the
+change adds and the conventions document does not — which is exactly the
+distinction lexical matching cannot draw.
+
+### What it did not buy, and why that is the interesting part
+
+It did not rescue the two cases V2.4 demoted. Both of those consumers reach the
+changed service over HTTP: one is a Python client, the other a Go gateway, and
+neither imports anything from it. There is no declaration to match.
+
+That is worth stating plainly because it is a limit of the whole approach rather
+than of this implementation. **Both structural channels are silent for exactly
+the same couplings** — the ones no manifest and no import statement records —
+and on this corpus that is about a third of the cases. Syntax-based retrieval
+can only see relationships somebody wrote down. An HTTP contract is not written
+down anywhere except in prose and in matching string literals, which is the
+lexical channel's territory and nobody else's.
+
+The corpus was deliberately built with those cases in it, in V2.2, for this
+reason. It would have been easy to build an organisation where every dependency
+is declared, and every structural channel would then have looked considerably
+better than it deserves.
+
+### The cache, finally used for something
+
+This is the first channel that needs the cache built in V2.3: indexing means
+reading every source file in every sibling, which is the most expensive thing
+retrieval does. Warm indexing of the full corpus is about a third faster and
+rebuilds nothing.
+
+The claim tested is **"a warm run opens no files"** rather than a stopwatch
+threshold. On a six-repository fixture, timing is mostly noise; not opening a
+single file is the property that actually makes it faster, and it holds on any
+machine.
+
+Two safety properties are asserted directly rather than argued: using a cache
+produces the same ranking and the same leads as not using one, and a deliberately
+poisoned index can send the model somewhere useless but cannot fabricate
+evidence — because what this channel produces are *leads*, and whether anything
+is cited is decided afterwards against the live checkout with no cache in that
+path.
+
+The cache is also wired into `panorama review` here, and a cache that cannot be
+opened is skipped rather than failing the run. Refusing to review because an
+optimisation is unavailable would be a strange trade.
+
+### A bug worth recording
+
+A deleted file is written `+++ /dev/null` in a unified diff, and that was
+overwriting the path recovered from the preceding `---` line. The effect was
+that **the removed declarations of an entire deleted file were invisible** —
+and deleting a file is the largest contract break there is. It was caught by a
+test written because that code path looked awkward, not because anything had
+gone visibly wrong, which is the argument for writing tests at the shapes that
+feel fiddly.
+
+A second, quieter one was designed out rather than discovered: a name appearing
+on *both* sides of a diff is neither added nor removed. Without that
+subtraction, re-indenting a file would read as deleting and re-declaring
+everything in it, and every formatting change would look like a contract break.
+The formatting-only control in the corpus would have failed immediately, which
+is the corpus doing its job.

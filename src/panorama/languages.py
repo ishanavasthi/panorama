@@ -43,6 +43,30 @@ from pathlib import Path
 #: matter are the ones a human wrote.
 MAX_SOURCE_BYTES = 512 * 1024
 
+#: Directories that hold code nobody in this organisation wrote. Indexing a
+#: vendored dependency would fill the index with symbols that belong to a
+#: third party and are not owned by the repository containing them, which is
+#: precisely the wrong answer to "who owns this".
+SKIP_DIRECTORIES = frozenset(
+    {
+        ".git",
+        "node_modules",
+        "vendor",
+        "dist",
+        "build",
+        "out",
+        "coverage",
+        ".next",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+    }
+)
+
 
 @dataclass(frozen=True)
 class ManifestFacts:
@@ -472,6 +496,23 @@ def extract_symbols(pack: LanguagePack, text: str) -> SymbolFacts:
             break  # one import form per line is enough
 
     return SymbolFacts(exports=tuple(exports), imports=tuple(imports))
+
+
+def iter_source_files(root: Path):
+    """Every file under ``root`` that some pack claims, in a stable order.
+
+    Sorted so anything derived from this walk is reproducible: an index whose
+    contents depend on filesystem ordering would produce a cache that differs
+    between machines for no reason.
+    """
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        if any(part in SKIP_DIRECTORIES for part in path.relative_to(root).parts[:-1]):
+            continue
+        if pack_for_path(path) is None:
+            continue
+        yield path
 
 
 def extract_file_symbols(path: Path) -> SymbolFacts:

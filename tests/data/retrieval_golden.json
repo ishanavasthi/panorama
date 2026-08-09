@@ -2396,10 +2396,11 @@
     "ranked_repos": [
       {
         "provenance": [
-          "lexical #1: shares 6 identifier(s) with the diff: DEFAULT_LINKS_PER_PAGE, MAX_LINKS_PER_PAGE, Pagination, limits, reporting (+1 more)"
+          "lexical #1: shares 6 identifier(s) with the diff: DEFAULT_LINKS_PER_PAGE, MAX_LINKS_PER_PAGE, Pagination, limits, reporting (+1 more)",
+          "symbols #2: already exports 2 name(s) this change adds: DEFAULT_LINKS_PER_PAGE, MAX_LINKS_PER_PAGE"
         ],
         "repo": "acme-shared",
-        "score": 0.016393,
+        "score": 0.032522,
         "signals": [
           "DEFAULT_LINKS_PER_PAGE",
           "MAX_LINKS_PER_PAGE",
@@ -2898,6 +2899,18 @@
     "ranked_repos": [
       {
         "provenance": [
+          "lexical #2: shares 2 identifier(s) with the diff: TIMESTAMP_FORMAT, formatting",
+          "symbols #2: already exports 1 name(s) this change adds: TIMESTAMP_FORMAT"
+        ],
+        "repo": "acme-shared",
+        "score": 0.032258,
+        "signals": [
+          "TIMESTAMP_FORMAT",
+          "formatting"
+        ]
+      },
+      {
+        "provenance": [
           "lexical #1: shares 7 identifier(s) with the diff: TIMESTAMP_FORMAT, datetime, moment, produced, strftime (+2 more)"
         ],
         "repo": "acme-contracts",
@@ -2910,17 +2923,6 @@
           "strftime",
           "timestamps",
           "timezone"
-        ]
-      },
-      {
-        "provenance": [
-          "lexical #2: shares 2 identifier(s) with the diff: TIMESTAMP_FORMAT, formatting"
-        ],
-        "repo": "acme-shared",
-        "score": 0.016129,
-        "signals": [
-          "TIMESTAMP_FORMAT",
-          "formatting"
         ]
       },
       {
@@ -3505,10 +3507,11 @@
       {
         "provenance": [
           "lexical #1: shares 3 identifier(s) with the diff: candidate, http, validateUrl",
-          "dependency #2: this repository depends on it (acme-shared), directly"
+          "dependency #2: this repository depends on it (acme-shared), directly",
+          "symbols #2: already exports 1 name(s) this change adds: validateUrl"
         ],
         "repo": "acme-shared",
-        "score": 0.032522,
+        "score": 0.048652,
         "signals": [
           "candidate",
           "http",

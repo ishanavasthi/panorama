@@ -152,9 +152,32 @@ it votes identically for every pull request in a repository, whatever the change
 does. And it produces **no file-level leads** — a manifest edge tells you which
 repository matters, never where in it.
 
-**Still to come:** a *symbol index*, so "does anything actually consume this"
-becomes a lookup rather than a guess; and, as a stretch, *co-change coupling*
-mined from history.
+**The symbol channel** (live) asks the sharpest question available: *does another
+repository import a name this change removes?* An import is a declaration of
+consumption, written by the consumer itself, so a repository that imports a
+deleted symbol is broken by construction rather than by resemblance — and the
+lead is a specific line rather than a guess. It makes two claims in a fixed
+strength order: importing a removed name is a **break**; exporting a name the
+change adds is **duplication**. A duplication signal never outranks a break.
+
+Building this index means reading every source file in every sibling, which is
+the most expensive thing retrieval does, so it is cached per repository at a
+specific commit.
+
+**Still to come:** *co-change coupling* mined from history, as a stretch.
+
+### What the structural channels cannot see
+
+Both of them can only see relationships somebody wrote down. A Python client and
+a Go gateway can each depend utterly on a TypeScript service and appear in no
+manifest and no import statement anywhere, because the coupling is an HTTP
+contract — a URL string on one side matching a route declaration on the other.
+For those, both structural channels are silent and lexical matching is the only
+thing that speaks.
+
+That is roughly a third of the evaluation corpus, deliberately. Building a
+fixture organisation where every dependency is declared would have made every
+structural channel look considerably better than it deserves.
 
 ### Why rankings are fused rather than summed
 
@@ -200,12 +223,19 @@ generating confident nonsense.
 
 ### What retrieval currently achieves
 
-On the labelled corpus, every positive case has its target repository inside the
-top three, and the two hardest cases — a convention violated by an absence, and
-the case that had merely *tied* for first since V1 — both rank their target
-first. The cost is visible too: two contract-break cases have their target
-displaced to second by the magnitude-blindness described above. The numbers are
-re-measured on every commit and a drop that nobody explains does not land.
+On the labelled corpus, **every** positive case has its target repository inside
+the top three, and ten of twelve have it outright first. The two hardest cases —
+a convention violated by an absence, and the case that had merely *tied* for
+first since V1 — both rank their target first.
+
+The two that sit second are the ones where every structural channel is silent:
+their consumers reach the changed service over HTTP, so nothing is declared for
+the graph or the index to find, and rank fusion's blindness to magnitude lets a
+repository ranked second by two channels edge past a target ranked first by one.
+That is understood, recorded, and the concrete input to the tuning pass.
+
+The numbers are re-measured on every commit, and a drop nobody explains does not
+land.
 
 ---
 

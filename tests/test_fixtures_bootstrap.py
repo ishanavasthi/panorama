@@ -266,6 +266,7 @@ PRODUCTION_MODULES = (
     "panorama.channels",
     "panorama.config",
     "panorama.dependencies",
+    "panorama.symbols",
     "panorama.claude_runner",
     "panorama.languages",
     "panorama.delivery",

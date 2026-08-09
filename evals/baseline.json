@@ -6,10 +6,10 @@
     "n_scored": 16,
     "n_unscorable": 2,
     "n_positive": 12,
-    "recall_at_1": 0.75,
-    "recall_at_1_outright": 0.75,
+    "recall_at_1": 0.8333333333333334,
+    "recall_at_1_outright": 0.8333333333333334,
     "recall_at_k": 1,
-    "mrr": 0.875,
+    "mrr": 0.9166666666666666,
     "file_recall": 1.0,
     "n_forbidden_violations": 0,
     "n_failed": 0
@@ -117,10 +117,10 @@
     "duplicate-logic-date-formatting": {
       "scorable": true,
       "expect_finding": true,
-      "rank": 2,
+      "rank": 1,
       "tied_with": 1,
-      "recall_at_1": false,
-      "recall_at_1_outright": false,
+      "recall_at_1": true,
+      "recall_at_1_outright": true,
       "recall_at_k": true,
       "file_recall": 1.0,
       "passed": true

@@ -256,21 +256,64 @@ rather than a defect. Recorded in `DECISIONS.md` rather than worked around.
 
 ---
 
-## V2.5 — Symbol index channel
+## V2.5 — Symbol index channel · **DONE**
 
-- [ ] Export extraction per language pack, with `path:line`
-- [ ] Import extraction per language pack
-- [ ] Cached by `(repo, head_sha)`
-- [ ] Removed-symbol → sibling-import lookup (exact rename detection)
-- [ ] Large-file cap
-- [ ] Test: extraction correctness per language
-- [ ] Test: cache hit/miss and SHA invalidation
-- [ ] Test: a symbol appearing only in a comment is not indexed
-- [ ] Test: warm cache does no file reads for unchanged repos
-- [ ] Measured: recall@1 improves over V2.4
-- [ ] Measured: warm-cache retrieval faster than cold on the full corpus
+- [x] Export extraction per language pack, with `path:line`
+- [x] Import extraction per language pack
+- [x] Cached by `(repo, head_sha)`, pruned so history does not accumulate
+- [x] Removed-symbol → sibling-import lookup (exact rename detection)
+- [x] Added-symbol → sibling-export lookup (duplication)
+- [x] Rank encodes the *kind* of claim: a break always outranks a duplicate
+- [x] Large-file cap, plus a per-repository file cap and a lead cap
+- [x] Vendored directories excluded — their symbols belong to a third party
+- [x] Cache wired into `panorama review`; a cache that will not open is skipped
+      rather than failing the review
+- [x] Test: extraction correctness per language
+- [x] Test: cache hit/miss and SHA invalidation, and stale-generation pruning
+- [x] Test: a symbol appearing only in a comment is not indexed
+- [x] Test: warm cache does no file reads for unchanged repos
+- [x] Test: a symbol on both sides of a diff is neither added nor removed
+- [x] Test: using a cache does not change what is concluded
+- [x] Test: a poisoned cache can mislead but cannot fabricate evidence
+- [x] Measured: **recall@1 improves over V2.4, 0.750 → 0.833**
+- [x] Measured: **warm-cache indexing ~33% faster** on the full corpus and
+      rebuilds nothing
+- [x] 33 new tests; full suite 641 green; ruff clean
 
-**Exit:** both measurements recorded.
+**Exit met:** both measurements recorded.
+
+### Findings from V2.5
+
+- **recall@1 0.750 → 0.833, MRR 0.875 → 0.917, recall@3 held at 1.000, nothing
+  regressed.** The case that moved is the cross-language duplicate, which had
+  been beaten by the conventions repository on incidental shared vocabulary.
+  The symbol index sees that the shared library actually *exports* a name the
+  change adds, which the conventions document does not, and that is enough to
+  separate them.
+- **It did not rescue the two cases V2.4 demoted, and the reason is worth
+  keeping.** Both consumers reach the changed service over HTTP. One is a
+  Python client, the other a Go gateway, and neither *imports* anything from
+  it — there is no declaration to match. This channel is silent for exactly the
+  couplings the dependency graph is silent for, which means the corpus has a
+  third of its cases where both structural channels abstain and only lexical
+  matching speaks. That is a real limitation of syntax-based retrieval, not a
+  gap in this implementation.
+- **A bug in the diff reader, in the most consequential place.** A deleted file
+  is written `+++ /dev/null`, and that was overwriting the path recovered from
+  the `---` line — so the removed declarations of an entire deleted file were
+  invisible. Deleting a file is the largest contract break there is. Caught by
+  a test written specifically because that path looked awkward.
+- **The added-and-removed subtraction matters more than it looks.** A reformat
+  re-emits declarations on both sides of a diff; without cancelling those out,
+  every formatting change would read as deleting and re-declaring the whole
+  file. The formatting-only control would have failed loudly, which is the
+  corpus doing its job.
+- **The warm-cache claim is asserted as "read no files", not as a stopwatch.**
+  On a six-repository fixture a timing assertion is mostly noise; "it did not
+  open a single file" is the property that actually makes it faster, and it
+  holds regardless of the machine.
+
+---
 
 ---
 

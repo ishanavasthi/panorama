@@ -36,6 +36,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from panorama.cache import Cache
 from panorama.channels import (
     ChannelResult,
     Hit,
@@ -484,25 +485,36 @@ def _lexical_result(channel: LexicalChannel, found: LexicalPass) -> ChannelResul
     )
 
 
-def active_channels() -> tuple[RetrievalChannel, ...]:
+def active_channels(cache: Cache | None = None) -> tuple[RetrievalChannel, ...]:
     """The channels that contribute to a review, in a stable order.
 
-    A function rather than a constant so the import graph stays one-directional:
-    each channel imports the shared interface, and only this composition point
-    imports the channels.
+    A function rather than a constant so the import graph stays one-directional
+    — each channel imports the shared interface, and only this composition point
+    imports the channels — and so the cache can be handed in rather than reached
+    for. ``cache=None`` means every channel computes from scratch, which is what
+    the evaluation harness and the tests use: a run that depends on state left
+    behind by an earlier run is not a measurement.
     """
     from panorama.dependencies import DependencyChannel
+    from panorama.symbols import SymbolChannel
 
-    return (LexicalChannel(), DependencyChannel())
+    return (LexicalChannel(), DependencyChannel(), SymbolChannel(cache))
 
 
-def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
+def retrieve(
+    pr: PullRequest, workspace: Workspace, *, cache: Cache | None = None
+) -> RetrievalResult:
     """Rank sibling repositories by how strongly the change points at them.
 
     The composition point: every channel ranks independently, and their
-    rankings are fused. The lexical channel additionally supplies the
-    file-level leads, because it is the only one that matches *lines* — the
-    structural channels say which repository matters, not where in it.
+    rankings are fused. Leads come from the channels that match *locations* —
+    the lexical pass, which matches lines, and the symbol index, which matches
+    declarations. The dependency graph contributes ranking only, because a
+    manifest edge names a repository and never a place inside it.
+
+    ``cache`` is an optimisation and nothing more: passing one changes how much
+    work the run does, never what it concludes. Every citation is validated
+    against the live checkout regardless.
     """
     lexical_channel = LexicalChannel()
     lexical = lexical_channel.search(pr, workspace)
@@ -510,7 +522,7 @@ def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
 
     results = [
         channel.rank(pr, workspace)
-        for channel in active_channels()
+        for channel in active_channels(cache)
         # The lexical pass has already run; re-running it would double the
         # `git grep` cost of every review to produce the same answer.
         if channel.name != lexical_channel.name
@@ -527,6 +539,17 @@ def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
         for fused in fuse(results)
     ]
 
+    hits = list(lexical.hits)
+    seen = {(hit.repo, hit.path, hit.line) for hit in hits}
+    for result in results:
+        if result.channel == lexical_channel.name:
+            continue
+        for hit in result.hits:
+            key = (hit.repo, hit.path, hit.line)
+            if key not in seen:
+                seen.add(key)
+                hits.append(hit)
+
     convention_docs = {
         entry.name: entry.convention_docs
         for entry in workspace.org_entries()
@@ -536,8 +559,8 @@ def retrieve(pr: PullRequest, workspace: Workspace) -> RetrievalResult:
     return RetrievalResult(
         signals=lexical.signals,
         searched=lexical.searched,
-        hits=lexical.hits,
+        hits=hits,
         ranked_repos=ranked,
         convention_docs=convention_docs,
-        truncated=lexical.truncated,
+        truncated=lexical.truncated or any(r.truncated for r in results),
     )
