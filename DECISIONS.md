@@ -1996,24 +1996,41 @@ before it can claim to have helped anything.
 at 1 of 3 live runs, and the backlog's guess was that fixing retrieval would
 carry the review with it.
 
-It did not. Re-measured on that case alone at `k = 5`: **2 of 5**, still flaky.
-Against 1 of 3 that is no change that five runs can detect.
+It did not. Measured on that case alone, twice:
 
-The number that explains it is evidence-repo accuracy on the same runs: **0.400**.
-On three of five runs the model did not cite the gateway at all, despite
-retrieval handing it over ranked outright first. So the remaining failure is not
-that the right repository was never offered — it is the difficulty the case was
-built for and which its own notes predicted would end up here: saying the gateway
-*breaks* rather than that three repositories *mention* an error code.
+| | before A3 | `k = 5` | `k = 10` |
+|---|---:|---:|---:|
+| pass rate | 1 of 3 (0.33) | 2 of 5 (0.40) | **4 of 10 (0.40)** |
+| category accuracy | — | 0.400 | **0.400** |
+| evidence cites the right repository | — | 0.400 | **0.600** |
+| evidence cites the right file | — | 0.400 | **0.600** |
 
-Two things worth taking from a negative result:
+The two post-A3 measurements agree at 0.40, so that figure is real. Whether it
+beats the 0.33 it replaced is **unanswerable**, and saying so is the honest
+result: the earlier figure came from three runs, and 1-of-3 cannot be
+distinguished from 4-of-10 by anything. It is recorded as unchanged.
+
+What the `k = 10` run does settle is *where* the remaining failure lives. The
+model cites the right repository on **6 of 10** runs but matches the labelled
+category on only **4** — so about four runs miss the gateway entirely despite
+retrieval handing it over ranked outright first, and about two find the right
+place and call it something other than a contract break. That second group is
+the same disagreement recorded for the removed-enum and date-formatting cases:
+the boundary between "breaks a contract" and "violates a convention" is genuinely
+fuzzy, and the model lands on the other side of it some of the time.
+
+Three things worth taking from a negative result:
 
 - **The tiers now disagree about this case**, which is more informative than
   either number alone. It localises what is left to the prompt's category and
   severity rubric rather than to retrieval, and it means the offline gate can no
-  longer be used as a proxy for whether this case is fixed.
-- **The estimate is deliberately left wide.** A `k = 10` confirmation run was
-  started and interrupted before reporting, so 2-of-5 stands as the best current
-  figure. With a flake rate of 22% corpus-wide, nothing claiming to move this
-  should be believed below `k = 10`. Recorded as measured rather than rounded
-  into a story.
+  longer stand in for whether this case works.
+- **"Found the right place" and "chose the right label" are measurably
+  different numbers** — 0.600 against 0.400 on a case where nobody disputes the
+  location. That is direct evidence for reporting them separately rather than
+  collapsing both into one category-accuracy figure, which is one of the options
+  the backlog lists for the category problem and now the best-supported one.
+- **`k = 3` is not enough to measure this case, and now there is a number for
+  it.** At a true rate near 0.40 with this flake level, three runs will report
+  anywhere from zero to three passes without the underlying behaviour changing.
+  The original 1-of-3 was never evidence of anything in particular.

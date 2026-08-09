@@ -754,12 +754,13 @@ in the same form so status stays in one place.
 - [x] Measured: **recall@1 0.833 → 1.000**, outright recall@1 0.833 → 1.000,
       MRR 0.917 → 1.000, recall@3 and file recall held at 1.000
 - [x] Measured: no case regressed; all four scorable negatives still zero leads
-- [x] Live: `eval --live -k 5` re-measurement of `B3` — **done, and negative.**
-      2 of 5 versus 1 of 3 before: unchanged within the noise. A `k = 10`
-      confirmation run was interrupted before reporting.
+- [x] Live: `eval --live` re-measurement of `B3` — **done, and negative.**
+      2 of 5 at `k = 5`, confirmed **4 of 10 at `k = 10`**, against 1 of 3
+      before. The two post-A3 measurements agree at 0.40; whether that beats the
+      0.33 it replaced is unanswerable from three prior runs. Treat as unchanged.
 
-**Exit met offline.** The live re-measurement was run and says the review half
-of `B3` did not move.
+**Exit met offline.** The live re-measurement was run twice and says the review
+half of `B3` did not move.
 
 ### Findings from V2.12
 
@@ -791,12 +792,15 @@ of `B3` did not move.
   unmeasured. Recorded as `A4` rather than implied.
 - **Better retrieval did not buy a better review, and that is useful.** `B3` was
   the weakest case at both tiers. Retrieval now ranks its target outright first;
-  the live pass rate went from 1-of-3 to **2-of-5**, which is no change at all.
-  Evidence-repo accuracy of 0.400 on those runs says why: on three of five the
-  model did not cite the gateway even though it was handed over first. The two
-  tiers now disagree about this case, which is the most useful thing the
-  measurement produced — it localises what is left to the prompt's rubric rather
-  than to what gets looked at.
+  the live pass rate went 1-of-3 → 2-of-5 → **4-of-10**, which is no change the
+  earlier measurement is strong enough to contradict. The `k = 10` run
+  decomposes it: the model cites the right repository on **6** of 10 runs but
+  matches the labelled category on **4**, so about four runs miss the gateway
+  entirely despite it being handed over first, and about two find it and call it
+  something else. The two tiers now disagree about this case, which is the most
+  useful thing the measurement produced — it localises what is left to the
+  prompt's rubric rather than to what gets looked at, and it is direct evidence
+  for scoring "right place" separately from "right label" (`B1`).
 - **The corpus is saturated again.** Every offline retrieval metric now reads
   1.000. The harness can still catch a regression and can no longer demonstrate
   an improvement — the same position V2.1 reported, for the same reason, and the

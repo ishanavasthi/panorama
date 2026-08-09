@@ -5,6 +5,7 @@
 ASSIGNMENT.md
 IMPLEMENT.md
 DEMO_SCRIPT.md
+personal_memory.md
 
 # --- Panorama runtime state ---
 # Cloned sibling repos, per-run artifacts and raw model output. Owner-only on

@@ -141,6 +141,12 @@ duplication"); allow a case to accept more than one category; or score
 "cited the right place" separately from "chose the right label" as the headline.
 **Do not** relabel the two cases to make the number go up.
 
+**B3's `k = 10` re-measurement is direct evidence for the third option.** On
+that case the model cites the right repository on 6 of 10 runs and matches the
+labelled category on 4 — so "found the right place" and "chose the right label"
+are measurably different numbers on a case where nobody disputes the location.
+Reporting them as one figure hides which of the two is actually failing.
+
 ---
 
 ### B2 — Flake rate 22.2% · `accepted, worth reducing`
@@ -165,28 +171,42 @@ the removed error code — while leaving the shared library that merely defines 
 and the conventions document that describes it unranked. It is **outright rank
 1**, and the right repository is now what the model is handed first.
 
-**Live: re-measured, and it did *not* move.** `eval --live -k 5` on this case
-alone, after the channel landed: **2 of 5 passes**, flake still present.
-Against the previous 1 of 3, that is unchanged within the noise five runs can
-resolve — it is emphatically not a fix.
+**Live: re-measured at `k = 5` and confirmed at `k = 10`. It did *not* move.**
 
-The informative number is alongside it: **evidence-repo accuracy 0.400**. On
-three of five runs the model did not cite the gateway at all, even though
-retrieval now hands it over ranked outright first. So the failure is not that
-the right repository was never offered. It is the thing this case was built to
-test, exactly as its own notes predicted: the model has to say the gateway
-*breaks* rather than that three repositories *mention* an error code, and it
-does that about half the time.
+| | before A3 | after, `k=5` | after, `k=10` |
+|---|---:|---:|---:|
+| pass rate | 1 of 3 (0.33) | 2 of 5 (0.40) | **4 of 10 (0.40)** |
+| category accuracy | — | 0.400 | **0.400** |
+| evidence cites the right repo | — | 0.400 | **0.600** |
+| evidence cites the right file | — | 0.400 | **0.600** |
+
+The two independent post-A3 measurements agree at 0.40, so that figure is solid.
+Whether it is *better* than the 0.33 it replaced is unanswerable: the earlier
+number came from three runs, and 1-of-3 cannot be distinguished from 4-of-10.
+**Treat it as unchanged.**
+
+**What the `k = 10` numbers decompose into**, and this is the useful part. The
+model cites the right repository on **6 of 10** runs but matches the labelled
+category on only **4**. So roughly:
+
+- **4 runs** miss the gateway entirely — even though retrieval now hands it over
+  ranked outright first;
+- **2 runs** find the right place and call it something other than
+  `contract_break` — the same disagreement **B1** documents;
+- **4 runs** pass.
+
+One finding across the ten was discarded by host validation (0.10 per run).
 
 **Conclusion: A3 fixed the retrieval half and left the review half untouched.**
-That is worth having as a clean separation — the two tiers now disagree about
-this case, which localises the remaining problem to the prompt's category and
-severity rubric rather than to what gets looked at.
+The two tiers now disagree about this case, which is the most useful thing the
+measurement produced — it localises what remains to the prompt's category and
+severity rubric, and it means the offline gate can no longer stand in for
+whether this case works.
 
-**Still open, and now better specified.** A confirmation run at `k = 10` was
-started and interrupted before it reported, so 2-of-5 is the best current
-estimate and a wide one. Anything claiming to improve this needs `k ≥ 10` to be
-distinguishable from flake (**B2**), and the lever is the prompt, not retrieval.
+**Still open, and now well specified.** The lever is the prompt, not retrieval,
+and it overlaps **B1** almost exactly. Anything claiming to move it needs
+`k ≥ 10`: at 0.40 with this flake rate, `k = 3` would report anything between
+0 and 3 passes without the underlying behaviour changing at all.
 
 ---
 
