@@ -11,6 +11,10 @@ in one place and gives them names.
 
 Status: `open` · `accepted` (understood, not worth fixing) · `done`
 
+**Start at section F.** It is the newest evidence and the only section written
+from Panorama running against real pull requests rather than the fixture corpus.
+It changes what the most important open problem is.
+
 ---
 
 ## A. Retrieval quality
@@ -23,6 +27,10 @@ Status: `open` · `accepted` (understood, not worth fixing) · `done`
 > regressions, not improvements.** It remains a gate worth keeping and is no
 > longer evidence for any further retrieval change. Anything after this needs a
 > larger or harder corpus, or the live tier, before it can claim to have helped.
+>
+> **`F6` is the stronger version of this note.** Saturation says the offline
+> tier can no longer detect an *improvement*. F6 says neither tier can detect an
+> *omission*, because every case is labelled with exactly one target.
 
 ### A1 — Two contract-break cases rank #2 instead of #1 · `done`
 
@@ -331,3 +339,201 @@ Recorded so they are not re-litigated.
 - **Two of eighteen cases are not scorable offline** (the docs-only control and
   the single-repository defect). Both make claims about the *review*, not about
   retrieval. The report says so on every run.
+
+---
+
+## F. Breadth — what a real-organisation evaluation found
+
+> **Where this evidence came from.** An external reviewer ran Panorama, four
+> other submissions and their own in-house reviewer against the **same six real
+> pull requests** from a production organisation — a Go backend, a Next.js
+> frontend, a Python orchestrator — over twenty-plus runs, then independently
+> verified every citation by hand: does the file exist, does the line exist, is
+> the claim true. This is the first evidence about Panorama that does not come
+> from the fixture corpus, and it disagrees with the corpus.
+>
+> **What held.** Zero fabricated claims across six pull requests. Every citation
+> resolved. The stated security controls were true under adversarial test. On
+> the hardest pull request Panorama contradicted the PR description's own
+> justification and supported it with twelve references that all resolved, and
+> it found a HIGH-severity gap — a build-path gate still calling the old
+> unconditional trigger — that the evaluator had missed twice while building
+> their own ground truth.
+>
+> **What did not.** **Three findings across six pull requests.** The broadest
+> submission produced thirty-three, with every citation resolving, and caught
+> two real defects Panorama did not. The verdict was "precise and narrow"; the
+> best reviewer in the set was broad.
+>
+> Every item below pushes toward breadth, and breadth is exactly the direction
+> that produced the other submissions' failure modes. `F7` is the gate on all of
+> them.
+
+### F1 — Three findings across six real pull requests · `open`
+
+The headline defect, and the only axis where Panorama measurably lost.
+
+**Not caused by** the things worth ruling out first: there is no cap on the
+number of findings (`models.py:97` — "zero or more"), and host validation is not
+eating them (B3's `k = 10` run discarded 0.10 findings per run). The ceiling is
+behavioural, and four things build it, in descending order of how much of the
+gap I think each explains:
+
+1. **The job is defined as cross-repository only.** `prompts.py` opens with
+   "find impact that is only visible when you look beyond the repository the
+   pull request lives in". Anything true and serious *inside* the diff is out of
+   scope by the first sentence.
+2. **Restraint is explicitly ranked above coverage.** The rubric's own heading
+   reads `RESTRAINT -- this matters more than coverage`. It is doing precisely
+   what it was told, and that instruction bought the zero-fabrication result.
+3. **One pass per pull request.** `run_review` makes a single `claude -p` call
+   with one finite attention budget over the whole diff (see `F2`).
+4. **The corpus taught it.** Every labelled case has exactly one target, so a
+   reviewer emitting one correct finding per pull request scores perfectly
+   (see `F6`).
+
+**What a fix needs.** Yield raised by *structure* — more passes, more aimed
+signals, a wider category surface — never by weakening the restraint clause.
+The sentence "a plausible-looking guess is worse than no finding" is load-
+bearing and stays. Unmeasurable until `F6` moves.
+
+**Also contributing on a large organisation, and worth checking separately:**
+`D1` (a relevant repository never cloned), and the prompt's own size caps —
+`MAX_DIFF_CHARS = 60_000` and `_MAX_LEADS_IN_PROMPT = 30`. Both were sized
+against six fixture repositories and small diffs. Neither has been measured
+against a real pull request.
+
+---
+
+### F2 — The review stops at the first strong theme · `open`
+
+On the orchestrator pull request Panorama found the HIGH-severity functional gap
+the evaluator themselves had missed — and in the *same diff* missed a cross-repo
+contract drift another submission caught and a critical security bypass the
+in-house reviewer caught.
+
+**That is not a retrieval failure.** The evidence for all three was in the same
+workspace, in the same pass, for the same diff. Finding the hardest one and
+missing two easier ones is the signature of a single pass spending its budget
+proving one mechanism to the depth step 3 of the rubric demands.
+
+**What a fix needs.** A second pass over the signals *not* covered by any
+finding the first pass emitted: same diff, same workspace, plus the findings
+already reported, asked only what else is there. Costs one additional
+subscription call per review. The coverage gain has to be measured rather than
+assumed — and measuring it needs `F6`.
+
+---
+
+### F3 — Consumers outside the organisation are invisible · `open`
+
+A route move left every unsubscribe link in **already-delivered mail**
+permanently dead. Real, and missed.
+
+No repository contains those URLs. The consumer is an artifact already emitted
+into the world, and all five channels — lexical, dependency, symbol, co-change,
+HTTP — search sibling *repositories*. There is nothing for them to match.
+
+**This is a category gap, not a retrieval gap.** Removing or moving a
+publicly-issued route is a break whether or not any sibling references it. The
+same shape covers emitted links, webhook URLs handed to third parties, QR codes,
+deep links in shipped mobile builds, and anything already cached downstream.
+
+**What a fix needs.** A diff-side rule, not a search: a removed or moved public
+route is worth a finding *on its own terms*, evidenced by the diff itself, with
+severity set by whether the old address still resolves. The discriminator that
+keeps this from becoming "flag every route change" is checkable in the diff —
+whether the same change adds a redirect, alias or compatibility route for the
+old path. Note the consequence for host validation: such a finding has no
+outside evidence by its nature, so it is `single_repo`, which the cross-repo
+evidence rule permits and the current prompt discourages.
+
+---
+
+### F4 — A test that does not test what it names is not looked for · `open`
+
+A test named `…ResolvesTheInstructorPhoto` never calls the function it claims to
+test. Real, missed, and the evaluator's to fix.
+
+**The mechanism is explicit, not emergent.** The restraint clause instructs that
+a change touching only "documentation, comments, formatting or tests ... should
+produce no findings at all". Panorama is told, in those words, to ignore this.
+
+**The class is larger than tests:** claims inside the diff that the diff itself
+contradicts — a test name against its body, a docstring against the signature,
+a comment against the branch it sits above, an error message naming a field the
+code no longer reads. None of these need a sibling repository, retrieval, or a
+second checkout. They are decidable from the diff alone, which makes them the
+cheapest breadth available and the least likely to fabricate.
+
+**What a fix needs.** Narrow the carve-out from "tests produce no findings" to
+"*mechanical* test changes produce no findings", and add self-consistency to the
+step-1 signal list. Prompt-only, no schema change, no new channel.
+
+---
+
+### F5 — No security lens · `open`
+
+The in-house reviewer found a critical security bypass on the orchestrator pull
+request; Panorama did not. Security is not one of the five categories, not a
+retrieval channel, and appears in the rubric only insofar as severity is set by
+consequence.
+
+**Do not conflate this with M0.** Panorama's own boundary — what the model may
+touch — is the most thoroughly tested claim in the submission and it held. None
+of that is about the security of the *code under review*.
+
+**The capability is present but unaimed:** the HIGH finding Panorama did produce
+here — a gate still calling an old unconditional trigger — is adjacent to this
+class. It was found as a functional gap, not as a security one.
+
+**What a fix needs.** Aim it: add security-shaped signals to the step-1 list —
+an authorization branch made unconditional, a validation or authentication call
+dropped from a path that still executes, a check moved to a caller that does not
+always run. Prompt-first, since it needs no schema change; a distinct category
+only if measurement shows the label is what is missing. **Not** a second LLM
+verification pass — that is explicitly deferred and remains so.
+
+---
+
+### F6 — The corpus cannot see a miss · `open, blocks F1–F5`
+
+Every case in `evals/cases/` is labelled with exactly **one** target. The
+harness asks "was the labelled thing found, and how highly ranked" — never "what
+else was in this diff that a competent reviewer should have found". A reviewer
+that emits precisely one correct finding per pull request scores perfectly on
+every metric this project has.
+
+That is the number the whole of V2 was tuned against, and it is the number the
+external evaluation contradicted. Precision has a gate; **yield has never been
+measured at all**.
+
+**What a fix needs.** Cases annotated with every finding that should be
+produced, so omissions are scorable. That means **real pull requests with
+independently verified ground truth**, not more fixtures — the same blocker as
+`A4` and `C2`. The cheapest honest version: score a small set of real pull
+requests by hand once, freeze it, and treat it as the reference set for `F1`–`F5`.
+
+**Do not** invent multi-label fixture cases to fill the gap. A fixture author
+writing both the diff and the list of things it should surface is measuring the
+fixture author.
+
+---
+
+### F7 — Precision is the asset F1–F5 put at risk · `accepted, a gate on F1–F5`
+
+Recorded so it is not traded away by accident.
+
+Under six real pull requests, twenty-plus runs and hand-verification of every
+citation: **zero fabricated claims, every reference resolved**, and every stated
+control true under test. That last point separated Panorama from the field —
+another submission shipped `--tools Read,Grep,Glob,Bash` narrowed by an
+`--allowedTools` allowlist believing it enforced, and arbitrary commands ran
+through it with no permission denial. M0 exists because that assumption was
+tested rather than trusted.
+
+**The gate.** Any change made for breadth is measured for fabrication and dead
+references on the same set before it lands. A breadth gain paid for with one
+unresolvable citation is a loss, not a trade. Discard-never-downgrade,
+reference-only output, and "a plausible-looking guess is worse than no finding"
+are not on the table.
